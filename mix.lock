@@ -1,0 +1,6 @@
+%{"floki": {:hex, :floki, "0.7.2"},
+  "httpotion": {:hex, :httpotion, "2.2.1"},
+  "ibrowse": {:hex, :ibrowse, "4.2.2"},
+  "meck": {:hex, :meck, "0.8.4"},
+  "mochiweb": {:hex, :mochiweb, "2.12.2"},
+  "mock": {:hex, :mock, "0.1.1"}}
