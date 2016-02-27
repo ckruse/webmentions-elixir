@@ -9,7 +9,7 @@ This package is [available in Hex](https://hex.pm/packages/webmentions)
   1. Add webmentions to your list of dependencies in `mix.exs`:
 
         def deps do
-          [{:webmentions, "~> 0.0.2"}]
+          [{:webmentions, "~> 0.0.3"}]
         end
 
 ## Usage
