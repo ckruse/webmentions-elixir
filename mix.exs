@@ -7,6 +7,8 @@ defmodule Webmentions.Mixfile do
      elixir: "~> 1.2",
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,
+     description: description,
+     package: package,
      deps: deps]
   end
 
@@ -15,6 +17,19 @@ defmodule Webmentions.Mixfile do
   # Type "mix help compile.app" for more information
   def application do
     [applications: [:logger]]
+  end
+
+  def description do
+    """
+    A Webmentions (https://indiewebcamp.com/Webmention) module for Elixir
+    """
+  end
+
+  def package do
+    [files: ["lib", "mix.exs", "README.md", "LICENSE"],
+     maintainers: ["Christian Kruse"],
+     licenses: ["AGPL 3.0"],
+     links: %{"GitHub" => "https://github.com/ckruse/webmentions-elixir"}]
   end
 
   # Dependencies can be Hex packages:
