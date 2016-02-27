@@ -1,10 +1,10 @@
 # Webmentions
 
-**TODO: Add description**
+A [Webmention](https://indiewebcamp.com/Webmention) module for Elixir.
 
 ## Installation
 
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed as:
+This package is [available in Hex](https://hex.pm/packages/webmentions)
 
   1. Add webmentions to your list of dependencies in `mix.exs`:
 
@@ -12,9 +12,24 @@ If [available in Hex](https://hex.pm/docs/publish), the package can be installed
           [{:webmentions, "~> 0.0.1"}]
         end
 
-  2. Ensure webmentions is started before your application:
+## Usage
 
-        def application do
-          [applications: [:webmentions]]
-        end
+Just call `Webmentions.send_webmentions("http://example.org/")` where
+the URL is the URL of the source document:
+
+    Webmentions.send_webmentions("http://example.org/")
+
+This will give you either
+
+    {:ok, ["list", "of", "urls"]}
+
+where the list contains a list of URLs we sent a webmention to or
+
+    {:error, reason}
+
+## Dependencies
+
+We need [Floki](https://github.com/philss/floki) for HTML parsing and
+[HTTPotion](https://github.com/myfreeweb/httpotion) for HTTP communication.
+
 
