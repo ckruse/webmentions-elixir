@@ -14,21 +14,19 @@ defmodule Webmentions do
         end)
 
       sent = Enum.reduce(links, [], fn(link, acc) ->
-        dst = Floki.attribute(link, "href") |> List.first
+        dst = Floki.attribute(link, "href") |> List.first |> abs_uri(source_url, document)
 
-        if Regex.match?(~r/https?:\/\//, dst) do
-          case discover_endpoint(dst) do
-            {:ok, nil} ->
+        case discover_endpoint(dst) do
+          {:ok, nil} ->
+            acc
+          {:error, _} ->
+            acc
+          {:ok, endpoint} ->
+            if send_webmention(endpoint, source_url, dst) == :ok do
+              acc ++ [endpoint]
+            else
               acc
-            {:error, _} ->
-              acc
-            {:ok, endpoint} ->
-              if send_webmention(endpoint, source_url, dst) == :ok do
-                acc ++ [endpoint]
-              else
-                acc
-              end
-          end
+            end
         end
       end)
 
@@ -105,4 +103,35 @@ defmodule Webmentions do
       false
     end
   end
+
+  def blank?(val) do
+    String.strip(to_string(val)) == ""
+  end
+
+  def abs_uri(url, base_url, doc) do
+    parsed = URI.parse(url)
+    parsed_base = URI.parse(base_url)
+
+    cond do
+      not blank?(parsed.scheme) -> # absolute URI
+        url
+      blank?(parsed.scheme) and not blank?(parsed.host) -> # protocol relative URI
+        URI.to_string(%{parsed | scheme: parsed_base.scheme})
+      true ->
+        base_element = Floki.find(doc, "base")
+
+        new_base = if base_element == nil or blank?(Floki.attribute(base_element, "href")) do
+          base_url
+        else
+          abs_uri(Floki.attribute(base_element, "href") |> List.first,
+                  base_url, [])
+        end
+
+        parsed_new_base = URI.parse(new_base)
+        new_path = Path.expand(parsed.path || "/", Path.dirname(parsed_new_base.path || "/"))
+
+        URI.to_string(%{parsed | scheme: parsed_new_base.scheme, host: parsed_new_base.host, path: new_path})
+    end
+  end
+
 end

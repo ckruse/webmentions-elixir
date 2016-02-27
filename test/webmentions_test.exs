@@ -81,4 +81,17 @@ defmodule WebmentionsTest do
     end
   end
 
+  test "successfully sends mentions to relative URLs" do
+    doc = %HTTPotion.Response{status_code: 200, body: "<html class=\"h-entry\"><a href=\"/test\">blah</a>",
+                              headers: %HTTPotion.Headers{hdrs: [link: "<http://example.org/webmentions>; rel=\"webmention\""]}}
+
+    with_mock HTTPotion, [get: fn(url, _opts) ->
+                           assert url != "/test"
+                           doc
+                         end,
+                         post: fn(_url, _opts) -> doc end] do
+      assert Webmentions.send_webmentions("http://example.org") == {:ok, ["http://example.org/webmentions"]}
+    end
+  end
+
 end
