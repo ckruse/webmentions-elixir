@@ -78,7 +78,7 @@ defmodule Webmentions do
     end
   end
 
-  def is_webmention_link(link) when is_binary(link) do
+  def is_webmention_link(link) do
     Regex.match?(~r/http:\/\/webmention\/|webmention/, link)
   end
 
