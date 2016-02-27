@@ -79,7 +79,7 @@ defmodule Webmentions do
   end
 
   def is_webmention_link(link) do
-    Regex.match?(~r/http:\/\/webmention\/|webmention/, link)
+    Regex.match?(~r/http:\/\/webmention\/|webmention/, to_string(link))
   end
 
   def is_valid_mention(source_url, target_url) do
