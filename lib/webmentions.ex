@@ -1,10 +1,10 @@
 defmodule Webmentions do
-  def send_webmentions(source_url) do
+  def send_webmentions(source_url, root_selector \\ ".h-entry") do
     response = HTTPotion.get(source_url, [ follow_redirects: true ])
 
     if HTTPotion.Response.success?(response) do
       document = Floki.parse(response.body)
-      content = Floki.find(document, ".h-entry")
+      content = Floki.find(document, root_selector)
       links = Floki.find(content, "a[href]") |>
         Enum.filter(fn(x) ->
           s = Floki.attribute(x, "rel") |>
