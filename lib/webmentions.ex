@@ -3,41 +3,45 @@ defmodule Webmentions do
     response = HTTPotion.get(source_url, [ follow_redirects: true ])
 
     if HTTPotion.Response.success?(response) do
-      document = Floki.parse(response.body)
-      content = Floki.find(document, root_selector)
-      links = Floki.find(content, "a[href]") |>
-        Enum.filter(fn(x) ->
-          s = Floki.attribute(x, "rel") |>
-            List.first |>
-            to_string
-          not String.contains?(s, "nofollow")
-        end)
-
-      sent = Enum.reduce(links, [], fn(link, acc) ->
-        dst = Floki.attribute(link, "href") |> List.first |> abs_uri(source_url, document)
-
-        case discover_endpoint(dst) do
-          {:ok, nil} ->
-            acc
-          {:error, _} ->
-            acc
-          {:ok, endpoint} ->
-            if send_webmention(endpoint, source_url, dst) == :ok do
-              acc ++ [endpoint]
-            else
-              acc
-            end
-        end
-      end)
-
-      {:ok, sent}
-
+      send_webmentions_for_doc(response.body, source_url, root_selector)
     else
       {:error, response.status_code}
     end
+
   rescue
     e ->
       {:error, e.message}
+  end
+
+  def send_webmentions_for_doc(html, source_url, root_selector \\ ".h-entry") do
+    document = Floki.parse(html)
+    content = Floki.find(document, root_selector)
+    links = Floki.find(content, "a[href]") |>
+      Enum.filter(fn(x) ->
+        s = Floki.attribute(x, "rel") |>
+          List.first |>
+          to_string
+        not String.contains?(s, "nofollow")
+      end)
+
+    sent = Enum.reduce(links, [], fn(link, acc) ->
+      dst = Floki.attribute(link, "href") |> List.first |> abs_uri(source_url, document)
+
+      case discover_endpoint(dst) do
+        {:ok, nil} ->
+          acc
+        {:error, _} ->
+          acc
+        {:ok, endpoint} ->
+          if send_webmention(endpoint, source_url, dst) == :ok do
+            acc ++ [endpoint]
+          else
+            acc
+          end
+      end
+    end)
+
+    {:ok, sent}
   end
 
   def send_webmention(endpoint, source, target) do
