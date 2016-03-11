@@ -1,5 +1,5 @@
 defmodule WebmentionsTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: false
   doctest Webmentions
 
   import Mock
@@ -16,7 +16,7 @@ defmodule WebmentionsTest do
   test "discovers from a link in document" do
     doc = %HTTPotion.Response{status_code: 200,
                               body: "<html><head><link rel=\"webmention\" href=\"http://example.org/webmentions\">",
-                              headers: %HTTPotion.Headers{hdrs: []}}
+                              headers: %HTTPotion.Headers{hdrs: ["content-type": "text/html"]}}
 
     with_mock HTTPotion, [get: fn(_url, _opts) -> doc end] do
       assert Webmentions.discover_endpoint("http://example.org") == {:ok, "http://example.org/webmentions"}
@@ -35,7 +35,7 @@ defmodule WebmentionsTest do
 <link rel="hub" href="https://switchboard.p3k.io">
 <link rel="self" href="http://example.org">
 """,
-                              headers: %HTTPotion.Headers{hdrs: []}}
+                              headers: %HTTPotion.Headers{hdrs: ["content-type": "text/html"]}}
 
     with_mock HTTPotion, [get: fn(_url, _opts) -> doc end] do
       assert Webmentions.discover_endpoint("http://example.org") == {:ok, "http://example.org/webmentions"}
@@ -92,6 +92,10 @@ defmodule WebmentionsTest do
                          post: fn(_url, _opts) -> doc end] do
       assert Webmentions.send_webmentions("http://example.org") == {:ok, ["http://example.org/webmentions"]}
     end
+  end
+
+  test "successfully mentions a HTTP ressource" do
+    assert Webmentions.send_webmentions_for_doc("<html class=\"h-entry\"><a href=\"http://images1.dawandastatic.com/Product/18223/18223505/big/1301969630-83.jpg\">blah</a>", "http://example.org/") == {:ok, []}
   end
 
 end

@@ -57,25 +57,30 @@ defmodule Webmentions do
     response = HTTPotion.get(source_url, [ follow_redirects: true ])
 
     if HTTPotion.Response.success?(response) do
-      if response.headers[:"Link"] != nil and is_webmention_link(response.headers[:"Link"]) do
-        link = String.split(response.headers[:"Link"], ",") |>
-          Enum.map(fn(x) -> String.strip(x) end) |>
-          Enum.filter(fn(x) -> is_webmention_link(x) end) |>
-          List.first
+      cond do
+        response.headers[:"Link"] != nil and is_webmention_link(response.headers[:"Link"]) ->
+          link = String.split(response.headers[:"Link"], ",") |>
+            Enum.map(fn(x) -> String.strip(x) end) |>
+            Enum.filter(fn(x) -> is_webmention_link(x) end) |>
+            List.first
 
-        {:ok, Regex.replace(~r/^<|>$/, Regex.replace(~r/; rel=.*/, link, ""), "")}
-      else
-        mention_link = Floki.parse(response.body) |>
-          Floki.find("link") |>
-          Enum.find(fn(x) ->
-            is_webmention_link(Floki.attribute(x, "rel") |> List.first)
-          end)
+          {:ok, Regex.replace(~r/^<|>$/, Regex.replace(~r/; rel=.*/, link, ""), "")}
 
-        if mention_link == nil do
+        response.headers[:"Content-Type"] != nil and Regex.match?(~r/text\//, response.headers[:"Content-Type"]) ->
+          mention_link = Floki.parse(response.body) |>
+            Floki.find("link") |>
+            Enum.find(fn(x) ->
+              is_webmention_link(Floki.attribute(x, "rel") |> List.first)
+            end)
+
+          if mention_link == nil do
+            {:ok, nil}
+          else
+            {:ok, Floki.attribute(mention_link, "href") |> List.first}
+          end
+
+        true ->
           {:ok, nil}
-        else
-          {:ok, Floki.attribute(mention_link, "href") |> List.first}
-        end
       end
     else
       {:error, response.status_code}
