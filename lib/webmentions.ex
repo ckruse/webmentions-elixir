@@ -38,6 +38,8 @@ defmodule Webmentions do
           else
             acc
           end
+        _ -> # error cases
+          acc
       end
     end)
 
@@ -57,16 +59,26 @@ defmodule Webmentions do
     response = HTTPotion.get(source_url, [ follow_redirects: true ])
 
     if HTTPotion.Response.success?(response) do
+      link = get_link_header(response)
+      is_text = response.headers[:"Content-Type"] != nil and Regex.match?(~r/text\//, response.headers[:"Content-Type"])
+
       cond do
-        response.headers[:"Link"] != nil and is_webmention_link(response.headers[:"Link"]) ->
-          link = String.split(response.headers[:"Link"], ",") |>
+        link != nil and is_webmention_link(link) ->
+          link = String.split(link, ",") |>
             Enum.map(fn(x) -> String.strip(x) end) |>
             Enum.filter(fn(x) -> is_webmention_link(x) end) |>
             List.first
 
-          {:ok, Regex.replace(~r/^<|>$/, Regex.replace(~r/; rel=.*/, link, ""), "")}
+          cleaned_link = Regex.replace(~r/^<|>$/, Regex.replace(~r/; rel=.*/, link, ""), "")
+          abs_link = if is_text do
+            abs_uri(cleaned_link, source_url, response.body)
+          else
+            abs_uri(cleaned_link, source_url, "")
+          end
 
-        response.headers[:"Content-Type"] != nil and Regex.match?(~r/text\//, response.headers[:"Content-Type"]) ->
+          {:ok, abs_link}
+
+        is_text ->
           mention_link = Floki.parse(response.body) |>
             Floki.find("link") |>
             Enum.find(fn(x) ->
@@ -76,7 +88,7 @@ defmodule Webmentions do
           if mention_link == nil do
             {:ok, nil}
           else
-            {:ok, Floki.attribute(mention_link, "href") |> List.first}
+            {:ok, Floki.attribute(mention_link, "href") |> List.first |> abs_uri(source_url, response.body)}
           end
 
         true ->
@@ -84,6 +96,21 @@ defmodule Webmentions do
       end
     else
       {:error, response.status_code}
+    end
+  rescue
+    e ->
+      e
+  end
+
+  def get_link_header(response) do
+    val = response.headers[:"Link"]
+    cond do
+      is_bitstring(val) ->
+        val
+      is_list(val) ->
+        Enum.filter(val, fn(x) -> is_webmention_link(x) end) |> List.first
+      true ->
+        nil
     end
   end
 
