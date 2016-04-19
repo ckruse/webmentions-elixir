@@ -80,10 +80,8 @@ defmodule Webmentions do
 
         is_text ->
           mention_link = Floki.parse(response.body) |>
-            Floki.find("link") |>
-            Enum.find(fn(x) ->
-              is_webmention_link(Floki.attribute(x, "rel") |> List.first)
-            end)
+            Floki.find("[rel~=webmention]") |>
+            List.first
 
           if mention_link == nil do
             {:ok, nil}
@@ -115,7 +113,7 @@ defmodule Webmentions do
   end
 
   def is_webmention_link(link) do
-    Regex.match?(~r/http:\/\/webmention\/|webmention/, to_string(link))
+    Regex.match?(~r/rel="?(http:\/\/webmention\/|webmention)"?/, to_string(link))
   end
 
   def is_valid_mention(source_url, target_url) do
@@ -164,7 +162,11 @@ defmodule Webmentions do
         end
 
         parsed_new_base = URI.parse(new_base)
-        new_path = Path.expand(parsed.path || "/", Path.dirname(parsed_new_base.path || "/"))
+        new_path = if parsed.path == "" or parsed.path == nil do
+          parsed_new_base.path
+        else
+          Path.expand(parsed.path || "/", Path.dirname(parsed_new_base.path || "/"))
+        end
 
         URI.to_string(%{parsed | scheme: parsed_new_base.scheme, host: parsed_new_base.host, path: new_path})
     end
