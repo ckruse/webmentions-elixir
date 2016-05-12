@@ -29,17 +29,19 @@ defmodule Webmentions do
 
       case discover_endpoint(dst) do
         {:ok, nil} ->
-          acc
-        {:error, _} ->
-          acc
+          acc ++ [{:ok, dst, nil, "no endpoint found"}]
+        {:error, result} ->
+          acc ++ [{:err, dst, nil, result}]
         {:ok, endpoint} ->
           if send_webmention(endpoint, source_url, dst) == :ok do
-            acc ++ [endpoint]
+            acc ++ [{:ok, dst, endpoint, "sent"}]
           else
-            acc
+            acc ++ [{:err, dst, endpoint, "sending failed"}]
           end
+        %HTTPotion.HTTPError{message: e} ->
+          acc ++ [{:err, dst, nil, e}]
         _ -> # error cases
-          acc
+          acc ++ [{:err, dst, nil, "unknown error"}]
       end
     end)
 
@@ -170,6 +172,36 @@ defmodule Webmentions do
 
         URI.to_string(%{parsed | scheme: parsed_new_base.scheme, host: parsed_new_base.host, path: new_path})
     end
+  end
+
+  def results_as_html(list) do
+    lines = Enum.map(list, fn(line) ->
+      case line do
+        {:err, dest, nil, reason} ->
+          "<strong>ERROR:</strong> #{dest}: #{reason}"
+        {:err, dest, endpoint, reason} ->
+          "<strong>ERROR:</strong> #{dest}: endpoint #{endpoint}: #{reason}"
+        {:ok, dest, endpoint, _} ->
+          "<strong>SUCCESS:</strong> #{dest}: sent to endpoint #{endpoint}"
+      end
+    end)
+
+    "<ul>" <> Enum.join(lines, "<li>") <> "</ul>"
+  end
+
+  def results_as_text(list) do
+    lines = Enum.map(list, fn(line) ->
+      case line do
+        {:err, dest, nil, reason} ->
+          "ERROR: #{dest}: #{reason}"
+        {:err, dest, endpoint, reason} ->
+          "ERROR: #{dest}: endpoint #{endpoint}: #{reason}"
+        {:ok, dest, endpoint, _} ->
+          "SUCCESS: #{dest}: sent to endpoint #{endpoint}"
+      end
+    end)
+
+    Enum.join(lines, "\n")
   end
 
 end
