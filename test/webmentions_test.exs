@@ -66,7 +66,7 @@ defmodule WebmentionsTest do
 
     with_mock HTTPotion, [get: fn(_url, _opts) -> doc end,
                          post: fn(_url, _opts) -> doc end] do
-      assert Webmentions.send_webmentions("http://example.org") == {:ok, ["http://example.org/webmentions"]}
+      assert Webmentions.send_webmentions("http://example.org") == {:ok, [{:ok, "http://example.org/test", "http://example.org/webmentions", "sent"}]}
     end
 
   end
@@ -90,12 +90,12 @@ defmodule WebmentionsTest do
                            doc
                          end,
                          post: fn(_url, _opts) -> doc end] do
-      assert Webmentions.send_webmentions("http://example.org") == {:ok, ["http://example.org/webmentions"]}
+      assert Webmentions.send_webmentions("http://example.org") == {:ok, [{:ok, "http://example.org/test", "http://example.org/webmentions", "sent"}]}
     end
   end
 
   test "successfully mentions a HTTP ressource" do
-    assert Webmentions.send_webmentions_for_doc("<html class=\"h-entry\"><a href=\"http://images1.dawandastatic.com/Product/18223/18223505/big/1301969630-83.jpg\">blah</a>", "http://example.org/") == {:ok, []}
+    assert Webmentions.send_webmentions_for_doc("<html class=\"h-entry\"><a href=\"http://images1.dawandastatic.com/Product/18223/18223505/big/1301969630-83.jpg\">blah</a>", "http://example.org/") == {:ok, [{:ok, "http://images1.dawandastatic.com/Product/18223/18223505/big/1301969630-83.jpg", nil, "no endpoint found"}]}
   end
 
 end

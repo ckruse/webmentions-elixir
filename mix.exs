@@ -42,7 +42,7 @@ defmodule Webmentions.Mixfile do
   #
   # Type "mix help deps" for more examples and options
   defp deps do
-    [{:httpotion, "~> 2.2"},
+    [{:httpotion, "~> 3.0"},
      {:floki, "~> 0.7.2"},
      {:mock, "~> 0.1.1", only: :test}]
   end
