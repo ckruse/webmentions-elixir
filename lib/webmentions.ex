@@ -30,6 +30,8 @@ defmodule Webmentions do
       case discover_endpoint(dst) do
         {:ok, nil} ->
           acc ++ [{:ok, dst, nil, "no endpoint found"}]
+        {:ok, ""} ->
+          acc ++ [{:ok, dst, nil, "no endpoint found"}]
         {:error, result} ->
           acc ++ [{:err, dst, nil, result}]
         {:ok, endpoint} ->

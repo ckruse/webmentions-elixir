@@ -60,6 +60,25 @@ defmodule WebmentionsTest do
     end
   end
 
+  test "ignores an empty link in header" do
+    doc = %HTTPotion.Response{status_code: 200, body: "<html>",
+                              headers: %HTTPotion.Headers{hdrs: %{"link" => ""}}}
+
+    with_mock HTTPotion, [get: fn(_url, _opts) -> doc end] do
+      assert Webmentions.discover_endpoint("http://example.org") == {:ok, nil}
+    end    
+  end
+
+  test "resolves an empty link in document to document URL" do
+    doc = %HTTPotion.Response{status_code: 200,
+                              body: "<html><head><link rel=\"webmention\" href=\"\">",
+                              headers: %HTTPotion.Headers{hdrs: %{"content-type" => "text/html"}}}
+
+    with_mock HTTPotion, [get: fn(_url, _opts) -> doc end] do
+      assert Webmentions.discover_endpoint("http://example.org") == {:ok, "http://example.org"}
+    end
+  end
+
   test "correctly sends a mention to example.org/webmentions" do
     doc = %HTTPotion.Response{status_code: 200, body: "<html class=\"h-entry\"><a href=\"http://example.org/test\">blah</a>",
                               headers: %HTTPotion.Headers{hdrs: %{"link" => "<http://example.org/webmentions>; rel=\"webmention\""}}}
@@ -97,5 +116,17 @@ defmodule WebmentionsTest do
   test "successfully mentions a HTTP ressource" do
     assert Webmentions.send_webmentions_for_doc("<html class=\"h-entry\"><a href=\"http://images1.dawandastatic.com/Product/18223/18223505/big/1301969630-83.jpg\">blah</a>", "http://example.org/") == {:ok, [{:ok, "http://images1.dawandastatic.com/Product/18223/18223505/big/1301969630-83.jpg", nil, "no endpoint found"}]}
   end
+
+  test "doesn't send a mention with empty link" do
+    doc = %HTTPotion.Response{status_code: 200, body: "<html class=\"h-entry\"><a href=\"http://example.org/test\">blah</a>",
+                              headers: %HTTPotion.Headers{hdrs: %{"link" => ""}}}
+
+    with_mock HTTPotion, [get: fn(_url, _opts) -> doc end,
+                          post: fn(_url, _opts) -> doc end] do
+      assert Webmentions.send_webmentions("http://example.org") == {:ok, [{:ok, "http://example.org/test", nil, "no endpoint found"}]}
+    end
+
+  end
+
 
 end
