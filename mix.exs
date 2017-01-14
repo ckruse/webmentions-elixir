@@ -44,6 +44,7 @@ defmodule Webmentions.Mixfile do
   defp deps do
     [{:httpotion, "~> 3.0"},
      {:floki, "~> 0.7.2"},
-     {:mock, "~> 0.1.1", only: :test}]
+     {:mock, "~> 0.1.1", only: :test},
+     {:ex_doc, ">= 0.0.0", only: :dev}]
   end
 end
