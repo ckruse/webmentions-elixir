@@ -35,10 +35,11 @@ defmodule Webmentions do
         {:error, result} ->
           acc ++ [{:err, dst, nil, result}]
         {:ok, endpoint} ->
-          if send_webmention(endpoint, source_url, dst) == :ok do
-            acc ++ [{:ok, dst, endpoint, "sent"}]
-          else
-            acc ++ [{:err, dst, endpoint, "sending failed"}]
+          case send_webmention(endpoint, source_url, dst) do
+            :ok ->
+              acc ++ [{:ok, dst, endpoint, "sent"}]
+            {:error, v} ->
+              acc ++ [{:err, dst, endpoint, "sending failed: #{v}"}]
           end
         %HTTPotion.HTTPError{message: e} ->
           acc ++ [{:err, dst, nil, e}]
@@ -53,9 +54,10 @@ defmodule Webmentions do
   def send_webmention(endpoint, source, target) do
     response = HTTPotion.post(endpoint, [body: 'source=#{source}&target=#{target}',
                                          headers: ["Content-Type": "application/x-www-form-urlencoded"]])
+
     case HTTPotion.Response.success?(response) do
       true -> :ok
-      _ -> :error
+      _ -> {:error, response.status_code}
     end
   end
 
