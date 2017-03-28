@@ -52,7 +52,9 @@ defmodule Webmentions do
   end
 
   def send_webmention(endpoint, source, target) do
-    response = HTTPotion.post(endpoint, [body: 'source=#{source}&target=#{target}',
+    www_source = URI.encode_www_form(source)
+    www_target = URI.encode_www_form(target)
+    response = HTTPotion.post(endpoint, [body: "source=#{www_source}&target=#{www_target}",
                                          headers: ["Content-Type": "application/x-www-form-urlencoded"]])
 
     case HTTPotion.Response.success?(response) do
