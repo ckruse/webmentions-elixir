@@ -43,8 +43,8 @@ defmodule Webmentions do
           end
         %HTTPotion.HTTPError{message: e} ->
           acc ++ [{:err, dst, nil, e}]
-        _ -> # error cases
-          acc ++ [{:err, dst, nil, "unknown error"}]
+        retval -> # error cases
+          acc ++ [{:err, dst, nil, "unknown error: #{inspect retval}"}]
       end
     end)
 
