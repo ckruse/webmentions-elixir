@@ -3,7 +3,7 @@ defmodule Webmentions.Mixfile do
 
   def project do
     [app: :webmentions,
-     version: "0.2.4",
+     version: "0.3.0",
      elixir: "~> 1.2",
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,
@@ -16,7 +16,7 @@ defmodule Webmentions.Mixfile do
   #
   # Type "mix help compile.app" for more information
   def application do
-    [applications: [:logger, :httpotion]]
+    [applications: [:logger, :httpoison]]
   end
 
   def description do
@@ -42,7 +42,7 @@ defmodule Webmentions.Mixfile do
   #
   # Type "mix help deps" for more examples and options
   defp deps do
-    [{:httpotion, "~> 3.0"},
+    [{:httpoison, "~> 0.11"},
      {:floki, "~> 0.15"},
      {:mock, "~> 0.1", only: :test},
      {:ex_doc, ">= 0.0.0", only: :dev}]

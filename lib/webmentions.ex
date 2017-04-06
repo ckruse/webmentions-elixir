@@ -1,16 +1,12 @@
 defmodule Webmentions do
   def send_webmentions(source_url, root_selector \\ ".h-entry") do
-    response = HTTPotion.get(source_url, [ follow_redirects: true ])
+    {rslt, response} = HTTPoison.get(source_url, [], [ follow_redirects: true ])
 
-    if HTTPotion.Response.success?(response) do
+    if success?(rslt, response) do
       send_webmentions_for_doc(response.body, source_url, root_selector)
     else
       {:error, response.status_code}
     end
-
-  rescue
-    e ->
-      {:error, e.message}
   end
 
   def send_webmentions_for_doc(html, source_url, root_selector \\ ".h-entry") do
@@ -41,8 +37,8 @@ defmodule Webmentions do
             {:error, v} ->
               acc ++ [{:err, dst, endpoint, "sending failed: #{v}"}]
           end
-        %HTTPotion.HTTPError{message: e} ->
-          acc ++ [{:err, dst, nil, e}]
+        %HTTPoison.Error{} = e ->
+          acc ++ [{:err, dst, nil, HTTPoison.Error.message(e)}]
         retval -> # error cases
           acc ++ [{:err, dst, nil, "unknown error: #{inspect retval}"}]
       end
@@ -54,21 +50,21 @@ defmodule Webmentions do
   def send_webmention(endpoint, source, target) do
     www_source = URI.encode_www_form(source)
     www_target = URI.encode_www_form(target)
-    response = HTTPotion.post(endpoint, [body: "source=#{www_source}&target=#{www_target}",
-                                         headers: ["Content-Type": "application/x-www-form-urlencoded"]])
+    {rslt, response} = HTTPoison.post(endpoint, "source=#{www_source}&target=#{www_target}", [{"Content-Type", "application/x-www-form-urlencoded"}])
 
-    case HTTPotion.Response.success?(response) do
+    case success?(rslt, response) do
       true -> :ok
       _ -> {:error, response.status_code}
     end
   end
 
   def discover_endpoint(source_url) do
-    response = HTTPotion.get(source_url, [ follow_redirects: true ])
+    {rslt, response} = HTTPoison.get(source_url, [], [ follow_redirects: true ])
 
-    if HTTPotion.Response.success?(response) do
+    if success?(rslt, response) do
       link = get_link_header(response)
-      is_text = response.headers[:"Content-Type"] != nil and Regex.match?(~r/text\//, response.headers[:"Content-Type"])
+      ctype = get_header(response.headers, "Content-Type")
+      is_text = ctype != nil and Regex.match?(~r/text\//, ctype)
 
       cond do
         link != nil and is_webmention_link(link) ->
@@ -101,15 +97,19 @@ defmodule Webmentions do
           {:ok, nil}
       end
     else
-      {:error, response.status_code}
+      case response do
+        %HTTPoison.Response{} ->
+          {:error, response.status_code}
+        %HTTPoison.Error{} ->
+          {:error, HTTPoison.Error.message(response)}
+        _ ->
+          {:error, "unknown error"}
+      end
     end
-  rescue
-    e ->
-      e
   end
 
   def get_link_header(response) do
-    val = response.headers[:"Link"]
+    val = get_header(response.headers, "Link")
     cond do
       is_bitstring(val) ->
         val
@@ -125,9 +125,9 @@ defmodule Webmentions do
   end
 
   def is_valid_mention(source_url, target_url) do
-    response = HTTPotion.get(source_url, [ follow_redirects: true ])
+    {rslt, response} = HTTPoison.get(source_url, [], [ follow_redirects: true ])
 
-    if HTTPotion.Response.success?(response) do
+    if success?(rslt, response) do
       Floki.parse(response.body) |>
         Floki.find("a, link") |>
         Enum.find(fn(x) ->
@@ -210,4 +210,22 @@ defmodule Webmentions do
     Enum.join(lines, "\n")
   end
 
+  defp success?(:ok, %HTTPoison.Response{status_code: code}) do
+    code in 200..299
+  end
+  defp success?(_, _), do: false
+
+  defp get_header(headers, key) do
+    ret = headers
+    |> Enum.filter(fn({k, _}) -> String.downcase(k) == String.downcase(key) end)
+
+    case ret do
+      [] ->
+        nil
+      nil ->
+        nil
+      _ ->
+        hd(ret) |> elem(1)
+    end
+  end
 end
