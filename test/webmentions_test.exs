@@ -8,7 +8,7 @@ defmodule WebmentionsTest do
     doc = %HTTPoison.Response{status_code: 200, body: "<html>",
                               headers: [{"Link", "<http://example.org/webmentions>; rel=\"webmention\""}]}
 
-    with_mock HTTPoison, [get: fn(_url, _opts) -> {:ok, doc} end] do
+    with_mock HTTPoison, [get: fn(_url, _headers, _opts) -> {:ok, doc} end] do
       assert Webmentions.discover_endpoint("http://example.org") == {:ok, "http://example.org/webmentions"}
     end
   end
@@ -17,7 +17,7 @@ defmodule WebmentionsTest do
     doc = %HTTPoison.Response{status_code: 200, body: "<html>",
                               headers: [{"link", "<http://example.org/webmentions>; rel=\"webmention\""}]}
 
-    with_mock HTTPoison, [get: fn(_url, _opts) -> {:ok, doc} end] do
+    with_mock HTTPoison, [get: fn(_url, _headers, _opts) -> {:ok, doc} end] do
       assert Webmentions.discover_endpoint("http://example.org") == {:ok, "http://example.org/webmentions"}
     end    
   end
@@ -27,7 +27,7 @@ defmodule WebmentionsTest do
                               body: "<html><head><link rel=\"webmention\" href=\"http://example.org/webmentions\">",
                               headers: [{"Content-Type", "text/html"}]}
 
-    with_mock HTTPoison, [get: fn(_url, _opts) -> {:ok, doc} end] do
+    with_mock HTTPoison, [get: fn(_url, _headers, _opts) -> {:ok, doc} end] do
       assert Webmentions.discover_endpoint("http://example.org") == {:ok, "http://example.org/webmentions"}
     end
   end
@@ -46,7 +46,7 @@ defmodule WebmentionsTest do
 """,
                               headers: [{"Content-Type", "text/html"}]}
 
-    with_mock HTTPoison, [get: fn(_url, _opts) -> {:ok, doc} end] do
+    with_mock HTTPoison, [get: fn(_url, _headers, _opts) -> {:ok, doc} end] do
       assert Webmentions.discover_endpoint("http://example.org") == {:ok, "http://example.org/webmentions"}
     end
   end
@@ -55,7 +55,7 @@ defmodule WebmentionsTest do
     doc = %HTTPoison.Response{status_code: 200, body: "<html>",
                               headers: [{"Link", "<http://example.org/webmentions>; rel=\"webmention\", <http://example.org/micropub>; rel=\"micropub\", <http://example.org/login>; rel=\"token_endpoint\", <https://indieauth.com/auth>; rel=\"authorization_endpoint\", <https://switchboard.p3k.io>; rel=\"hub\", <http://example.org>; rel=\"self\""}]}
 
-    with_mock HTTPoison, [get: fn(_url, _opts) -> {:ok, doc} end] do
+    with_mock HTTPoison, [get: fn(_url, _headers, _opts) -> {:ok, doc} end] do
       assert Webmentions.discover_endpoint("http://example.org") == {:ok, "http://example.org/webmentions"}
     end
   end
@@ -64,7 +64,7 @@ defmodule WebmentionsTest do
     doc = %HTTPoison.Response{status_code: 200, body: "<html>",
                               headers: [{"Link", "<http://example.org/micropub>; rel=\"micropub\", <http://example.org/login>; rel=\"token_endpoint\", <http://example.org/webmentions>; rel=\"webmention\", <https://indieauth.com/auth>; rel=\"authorization_endpoint\", <https://switchboard.p3k.io>; rel=\"hub\", <http://example.org>; rel=\"self\""}]}
 
-    with_mock HTTPoison, [get: fn(_url, _opts) -> {:ok, doc} end] do
+    with_mock HTTPoison, [get: fn(_url, _headers, _opts) -> {:ok, doc} end] do
       assert Webmentions.discover_endpoint("http://example.org") == {:ok, "http://example.org/webmentions"}
     end
   end
@@ -73,7 +73,7 @@ defmodule WebmentionsTest do
     doc = %HTTPoison.Response{status_code: 200, body: "<html>",
                               headers: [{"Link", ""}]}
 
-    with_mock HTTPoison, [get: fn(_url, _opts) -> {:ok, doc} end] do
+    with_mock HTTPoison, [get: fn(_url, _headers, _opts) -> {:ok, doc} end] do
       assert Webmentions.discover_endpoint("http://example.org") == {:ok, nil}
     end    
   end
@@ -83,7 +83,7 @@ defmodule WebmentionsTest do
                               body: "<html><head><link rel=\"webmention\" href=\"\">",
                               headers: [{"Content-Type", "text/html"}]}
 
-    with_mock HTTPoison, [get: fn(_url, _opts) -> {:ok, doc} end] do
+    with_mock HTTPoison, [get: fn(_url, _headers, _opts) -> {:ok, doc} end] do
       assert Webmentions.discover_endpoint("http://example.org") == {:ok, "http://example.org"}
     end
   end
@@ -92,8 +92,8 @@ defmodule WebmentionsTest do
     doc = %HTTPoison.Response{status_code: 200, body: "<html class=\"h-entry\"><a href=\"http://example.org/test\">blah</a>",
                               headers: [{"Link", "<http://example.org/webmentions>; rel=\"webmention\""}]}
 
-    with_mock HTTPoison, [get: fn(_url, _opts) -> {:ok, doc} end,
-                         post: fn(_url, _opts) -> {:ok, doc} end] do
+    with_mock HTTPoison, [get: fn(_url, _headers, _opts) -> {:ok, doc} end,
+                          post: fn(_url, _headers, _opts) -> {:ok, doc} end] do
       assert Webmentions.send_webmentions("http://example.org") == {:ok, [{:ok, "http://example.org/test", "http://example.org/webmentions", "sent"}]}
     end
 
@@ -103,8 +103,8 @@ defmodule WebmentionsTest do
     doc = %HTTPoison.Response{status_code: 200, body: "<html class=\"h-entry\"><a rel=\"nofollow\" href=\"http://example.org/test\">blah</a>",
                               headers: [{"Link", "<http://example.org/webmentions>; rel=\"webmention\""}]}
 
-    with_mock HTTPoison, [get: fn(_url, _opts) -> {:ok, doc} end,
-                         post: fn(_url, _opts) -> {:ok, doc} end] do
+    with_mock HTTPoison, [get: fn(_url, _headers, _opts) -> {:ok, doc} end,
+                         post: fn(_url, _headers, _opts) -> {:ok, doc} end] do
       assert Webmentions.send_webmentions("http://example.org") == {:ok, []}
     end
   end
@@ -113,11 +113,11 @@ defmodule WebmentionsTest do
     doc = %HTTPoison.Response{status_code: 200, body: "<html class=\"h-entry\"><a href=\"/test\">blah</a>",
                               headers: [{"Link", "<http://example.org/webmentions>; rel=\"webmention\""}]}
 
-    with_mock HTTPoison, [get: fn(url, _opts) ->
+    with_mock HTTPoison, [get: fn(url, _headers, _opts) ->
                            assert url != "/test"
                            {:ok, doc}
                          end,
-                         post: fn(_url, _opts) -> {:ok, doc} end] do
+                         post: fn(_url, _headers, _opts) -> {:ok, doc} end] do
       assert Webmentions.send_webmentions("http://example.org") == {:ok, [{:ok, "http://example.org/test", "http://example.org/webmentions", "sent"}]}
     end
   end
@@ -130,8 +130,8 @@ defmodule WebmentionsTest do
     doc = %HTTPoison.Response{status_code: 200, body: "<html class=\"h-entry\"><a href=\"http://example.org/test\">blah</a>",
                               headers: [{"Link", ""}]}
 
-    with_mock HTTPoison, [get: fn(_url, _opts) -> {:ok, doc} end,
-                          post: fn(_url, _opts) -> {:ok, doc} end] do
+    with_mock HTTPoison, [get: fn(_url, _headers, _opts) -> {:ok, doc} end,
+                          post: fn(_url, _headers, _opts) -> {:ok, doc} end] do
       assert Webmentions.send_webmentions("http://example.org") == {:ok, [{:ok, "http://example.org/test", nil, "no endpoint found"}]}
     end
   end
