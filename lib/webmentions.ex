@@ -7,6 +7,10 @@ defmodule Webmentions do
     else
       {:error, response.status_code}
     end
+
+  rescue
+    e ->
+      {:error, e.message}
   end
 
   def send_webmentions_for_doc(html, source_url, root_selector \\ ".h-entry") do
