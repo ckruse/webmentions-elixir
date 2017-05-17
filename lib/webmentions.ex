@@ -1,16 +1,15 @@
 defmodule Webmentions do
   def send_webmentions(source_url, root_selector \\ ".h-entry") do
-    {rslt, response} = HTTPoison.get(source_url, [], [ follow_redirects: true ])
-
-    if success?(rslt, response) do
-      send_webmentions_for_doc(response.body, source_url, root_selector)
-    else
-      {:error, response.status_code}
+    case HTTPoison.get(source_url, [], [ follow_redirects: true ]) do
+      {:ok, response} ->
+        if success?(:ok, response) do
+          send_webmentions_for_doc(response.body, source_url, root_selector)
+        else
+          {:error, response.status_code}
+        end
+      {:error, %HTTPoison.Error{reason: reason}} ->
+        {:error, Atom.to_string(reason)}
     end
-
-  rescue
-    e ->
-      {:error, e.message}
   end
 
   def send_webmentions_for_doc(html, source_url, root_selector \\ ".h-entry") do
