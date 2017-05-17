@@ -53,11 +53,15 @@ defmodule Webmentions do
   def send_webmention(endpoint, source, target) do
     www_source = URI.encode_www_form(source)
     www_target = URI.encode_www_form(target)
-    {rslt, response} = HTTPoison.post(endpoint, "source=#{www_source}&target=#{www_target}", [{"Content-Type", "application/x-www-form-urlencoded"}])
 
-    case success?(rslt, response) do
-      true -> :ok
-      _ -> {:error, response.status_code}
+    case HTTPoison.post(endpoint, "source=#{www_source}&target=#{www_target}", [{"Content-Type", "application/x-www-form-urlencoded"}]) do
+      {:ok, response} ->
+        case success?(:ok, response) do
+          true -> :ok
+          _ -> {:error, response.status_code}
+        end
+      {:error, %HTTPoison.Error{reason: reason}} ->
+        {:error, Atom.to_string(reason)}
     end
   end
 
