@@ -93,7 +93,7 @@ defmodule Webmentions do
         link != nil and is_webmention_link(link) ->
           link =
             String.split(link, ",")
-            |> Enum.map(fn x -> String.strip(x) end)
+            |> Enum.map(fn x -> String.trim(x) end)
             |> Enum.filter(fn x -> is_webmention_link(x) end)
             |> List.first()
 
@@ -182,7 +182,7 @@ defmodule Webmentions do
   end
 
   def blank?(val) do
-    String.strip(to_string(val)) == ""
+    String.trim(to_string(val)) == ""
   end
 
   def abs_uri(url, base_url, doc) do
