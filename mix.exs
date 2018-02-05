@@ -2,14 +2,16 @@ defmodule Webmentions.Mixfile do
   use Mix.Project
 
   def project do
-    [app: :webmentions,
-     version: "0.3.3",
-     elixir: "~> 1.2",
-     build_embedded: Mix.env == :prod,
-     start_permanent: Mix.env == :prod,
-     description: description(),
-     package: package(),
-     deps: deps()]
+    [
+      app: :webmentions,
+      version: "0.3.3",
+      elixir: "~> 1.2",
+      build_embedded: Mix.env() == :prod,
+      start_permanent: Mix.env() == :prod,
+      description: description(),
+      package: package(),
+      deps: deps()
+    ]
   end
 
   # Configuration for the OTP application
@@ -26,10 +28,12 @@ defmodule Webmentions.Mixfile do
   end
 
   def package do
-    [files: ["lib", "mix.exs", "README.md", "LICENSE"],
-     maintainers: ["Christian Kruse"],
-     licenses: ["AGPL 3.0"],
-     links: %{"GitHub" => "https://github.com/ckruse/webmentions-elixir"}]
+    [
+      files: ["lib", "mix.exs", "README.md", "LICENSE"],
+      maintainers: ["Christian Kruse"],
+      licenses: ["AGPL 3.0"],
+      links: %{"GitHub" => "https://github.com/ckruse/webmentions-elixir"}
+    ]
   end
 
   # Dependencies can be Hex packages:
@@ -42,9 +46,6 @@ defmodule Webmentions.Mixfile do
   #
   # Type "mix help deps" for more examples and options
   defp deps do
-    [{:httpoison, "~> 0.11"},
-     {:floki, "~> 0.15"},
-     {:mock, "~> 0.1", only: :test},
-     {:ex_doc, ">= 0.0.0", only: :dev}]
+    [{:httpoison, "~> 0.11"}, {:floki, "~> 0.15"}, {:mock, "~> 0.1", only: :test}, {:ex_doc, ">= 0.0.0", only: :dev}]
   end
 end
