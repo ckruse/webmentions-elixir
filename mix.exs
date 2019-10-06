@@ -46,6 +46,11 @@ defmodule Webmentions.Mixfile do
   #
   # Type "mix help deps" for more examples and options
   defp deps do
-    [{:httpoison, "~> 0.11"}, {:floki, "~> 0.15"}, {:mock, "~> 0.1", only: :test}, {:ex_doc, ">= 0.0.0", only: :dev}]
+    [
+      {:httpoison, "~> 1.6"},
+      {:floki, "~> 0.23"},
+      {:mock, "~> 0.3.3", only: :test},
+      {:ex_doc, ">= 0.0.0", only: :dev}
+    ]
   end
 end
