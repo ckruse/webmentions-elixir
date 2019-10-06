@@ -1,8 +1,10 @@
 defmodule Webmentions do
+  alias Webmentions.Utils
+
   def send_webmentions(source_url, root_selector \\ ".h-entry") do
     case HTTPoison.get(source_url, [], follow_redirects: true) do
       {:ok, response} ->
-        if success?(:ok, response) do
+        if Utils.success?(:ok, response) do
           send_webmentions_for_doc(response.body, source_url, root_selector)
         else
           {:error, response.status_code}
@@ -32,31 +34,14 @@ defmodule Webmentions do
       Enum.reduce(links, [], fn link, acc ->
         dst = Floki.attribute(link, "href") |> List.first() |> abs_uri(source_url, document)
 
-        case discover_endpoint(dst) do
-          {:ok, nil} ->
-            acc ++ [{:ok, dst, nil, "no endpoint found"}]
-
-          {:ok, ""} ->
-            acc ++ [{:ok, dst, nil, "no endpoint found"}]
-
-          {:error, result} ->
-            acc ++ [{:err, dst, nil, result}]
-
-          {:ok, endpoint} ->
-            case send_webmention(endpoint, source_url, dst) do
-              :ok ->
-                acc ++ [{:ok, dst, endpoint, "sent"}]
-
-              {:error, v} ->
-                acc ++ [{:err, dst, endpoint, "sending failed: #{v}"}]
-            end
-
-          %HTTPoison.Error{} = e ->
-            acc ++ [{:err, dst, nil, HTTPoison.Error.message(e)}]
-
-          # error cases
-          retval ->
-            acc ++ [{:err, dst, nil, "unknown error: #{inspect(retval)}"}]
+        with {:ok, endpoint} when endpoint != nil and endpoint != "" <- discover_endpoint(dst),
+             :ok <- send_webmention(endpoint, source_url, dst) do
+          acc ++ [{:ok, dst, endpoint, "sent"}]
+        else
+          {:ok, nil} -> acc ++ [{:ok, dst, nil, "no endpoint found"}]
+          {:ok, ""} -> acc ++ [{:ok, dst, nil, "no endpoint found"}]
+          {:error, status} when is_number(status) -> acc ++ [{:err, dst, nil, "Status #{status}"}]
+          {:error, message} -> acc ++ [{:err, dst, nil, message}]
         end
       end)
 
@@ -71,7 +56,7 @@ defmodule Webmentions do
            {"Content-Type", "application/x-www-form-urlencoded"}
          ]) do
       {:ok, response} ->
-        case success?(:ok, response) do
+        case Utils.success?(:ok, response) do
           true -> :ok
           _ -> {:error, response.status_code}
         end
@@ -84,7 +69,7 @@ defmodule Webmentions do
   def discover_endpoint(source_url) do
     {rslt, response} = HTTPoison.get(source_url, [], follow_redirects: true)
 
-    if success?(rslt, response) do
+    with true <- Utils.success?(rslt, response) do
       link = get_link_header(response)
       ctype = get_header(response.headers, "Content-Type")
       is_text = ctype != nil and Regex.match?(~r/text\//, ctype)
@@ -124,16 +109,9 @@ defmodule Webmentions do
           {:ok, nil}
       end
     else
-      case response do
-        %HTTPoison.Response{} ->
-          {:error, response.status_code}
-
-        %HTTPoison.Error{} ->
-          {:error, HTTPoison.Error.message(response)}
-
-        _ ->
-          {:error, "unknown error"}
-      end
+      %HTTPoison.Response{} = response -> {:error, response.status_code}
+      %HTTPoison.Error{} = error -> {:error, HTTPoison.Error.message(error)}
+      _ -> {:error, "unknown error"}
     end
   end
 
@@ -159,7 +137,7 @@ defmodule Webmentions do
   def is_valid_mention(source_url, target_url) do
     {rslt, response} = HTTPoison.get(source_url, [], follow_redirects: true)
 
-    if success?(rslt, response) do
+    if Utils.success?(rslt, response) do
       Floki.parse(response.body)
       |> Floki.find("a, link")
       |> Enum.find(fn x ->
@@ -181,28 +159,24 @@ defmodule Webmentions do
     end
   end
 
-  def blank?(val) do
-    String.trim(to_string(val)) == ""
-  end
-
   def abs_uri(url, base_url, doc) do
     parsed = URI.parse(url)
     parsed_base = URI.parse(base_url)
 
     cond do
       # absolute URI
-      not blank?(parsed.scheme) ->
+      not Utils.blank?(parsed.scheme) ->
         url
 
       # protocol relative URI
-      blank?(parsed.scheme) and not blank?(parsed.host) ->
+      Utils.blank?(parsed.scheme) and not Utils.blank?(parsed.host) ->
         URI.to_string(%{parsed | scheme: parsed_base.scheme})
 
       true ->
         base_element = Floki.find(doc, "base")
 
         new_base =
-          if base_element == nil or blank?(Floki.attribute(base_element, "href")) do
+          if Utils.blank?(base_element) or Utils.blank?(Floki.attribute(base_element, "href")) do
             base_url
           else
             abs_uri(Floki.attribute(base_element, "href") |> List.first(), base_url, [])
@@ -257,26 +231,13 @@ defmodule Webmentions do
     Enum.join(lines, "\n")
   end
 
-  defp success?(:ok, %HTTPoison.Response{status_code: code}) do
-    code in 200..299
-  end
-
-  defp success?(_, _), do: false
-
   defp get_header(headers, key) do
     ret =
       headers
       |> Enum.filter(fn {k, _} -> String.downcase(k) == String.downcase(key) end)
 
-    case ret do
-      [] ->
-        nil
-
-      nil ->
-        nil
-
-      _ ->
-        hd(ret) |> elem(1)
-    end
+    if Utils.blank?(ret),
+      do: nil,
+      else: hd(ret) |> elem(1)
   end
 end
