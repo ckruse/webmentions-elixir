@@ -1,16 +1,19 @@
 defmodule Webmentions do
+  use Tesla
   alias Webmentions.Utils
 
+  plug(Tesla.Middleware.FollowRedirects, max_redirects: 3)
+
   def send_webmentions(source_url, root_selector \\ ".h-entry") do
-    case HTTPoison.get(source_url, [], follow_redirects: true) do
+    case get(source_url) do
       {:ok, response} ->
         if Utils.success?(:ok, response) do
           send_webmentions_for_doc(response.body, source_url, root_selector)
         else
-          {:error, response.status_code}
+          {:error, response.status}
         end
 
-      {:error, %HTTPoison.Error{reason: reason}} ->
+      {:error, reason} ->
         {:error, Atom.to_string(reason)}
     end
   end
@@ -52,24 +55,22 @@ defmodule Webmentions do
     www_source = URI.encode_www_form(source)
     www_target = URI.encode_www_form(target)
 
-    case HTTPoison.post(endpoint, "source=#{www_source}&target=#{www_target}", [
+    case post(endpoint, "source=#{www_source}&target=#{www_target}", [
            {"Content-Type", "application/x-www-form-urlencoded"}
          ]) do
       {:ok, response} ->
-        case Utils.success?(:ok, response) do
-          true -> :ok
-          _ -> {:error, response.status_code}
-        end
+        if Utils.success?(:ok, response),
+          do: :ok,
+          else: {:error, response.status}
 
-      {:error, %HTTPoison.Error{reason: reason}} ->
+      {:error, reason} ->
         {:error, Atom.to_string(reason)}
     end
   end
 
   def discover_endpoint(source_url) do
-    {rslt, response} = HTTPoison.get(source_url, [], follow_redirects: true)
-
-    with true <- Utils.success?(rslt, response) do
+    with {:ok, response} <- get(source_url),
+         true <- Utils.success?(:ok, response) do
       link = get_link_header(response)
       ctype = get_header(response.headers, "Content-Type")
       is_text = ctype != nil and Regex.match?(~r/text\//, ctype)
@@ -109,8 +110,8 @@ defmodule Webmentions do
           {:ok, nil}
       end
     else
-      %HTTPoison.Response{} = response -> {:error, response.status_code}
-      %HTTPoison.Error{} = error -> {:error, HTTPoison.Error.message(error)}
+      %Tesla.Env{status: code} -> {:error, code}
+      {:error, reason} -> {:error, Atom.to_string(reason)}
       _ -> {:error, "unknown error"}
     end
   end
@@ -135,9 +136,8 @@ defmodule Webmentions do
   end
 
   def is_valid_mention(source_url, target_url) do
-    {rslt, response} = HTTPoison.get(source_url, [], follow_redirects: true)
-
-    if Utils.success?(rslt, response) do
+    with {:ok, response} <- get(source_url),
+         true <- Utils.success?(:ok, response) do
       Floki.parse_document!(response.body)
       |> Floki.find("a, link")
       |> Enum.find(fn {tagname, _, _} = node ->
@@ -153,7 +153,7 @@ defmodule Webmentions do
         target == target_url
       end) != nil
     else
-      false
+      _ -> false
     end
   end
 

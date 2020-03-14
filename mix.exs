@@ -18,7 +18,7 @@ defmodule Webmentions.Mixfile do
   #
   # Type "mix help compile.app" for more information
   def application do
-    [applications: [:logger, :httpoison]]
+    [applications: [:logger]]
   end
 
   def description do
@@ -47,9 +47,8 @@ defmodule Webmentions.Mixfile do
   # Type "mix help deps" for more examples and options
   defp deps do
     [
-      {:httpoison, "~> 1.6"},
+      {:tesla, "~> 1.3.0"},
       {:floki, "~> 0.23"},
-      {:mock, "~> 0.3.3", only: :test},
       {:ex_doc, ">= 0.0.0", only: :dev}
     ]
   end

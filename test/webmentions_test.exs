@@ -2,47 +2,44 @@ defmodule WebmentionsTest do
   use ExUnit.Case, async: false
   doctest Webmentions
 
-  import Mock
+  import Tesla.Mock
 
   test "discovers from a link in header" do
-    doc = %HTTPoison.Response{
-      status_code: 200,
+    doc = %Tesla.Env{
+      status: 200,
       body: "<html>",
       headers: [{"Link", "<http://example.org/webmentions>; rel=\"webmention\""}]
     }
 
-    with_mock HTTPoison, get: fn _url, _headers, _opts -> {:ok, doc} end do
-      assert Webmentions.discover_endpoint("http://example.org") == {:ok, "http://example.org/webmentions"}
-    end
+    mock(fn _ -> {:ok, doc} end)
+    assert Webmentions.discover_endpoint("http://example.org") == {:ok, "http://example.org/webmentions"}
   end
 
   test "discovers from a link in header case-insensitive" do
-    doc = %HTTPoison.Response{
-      status_code: 200,
+    doc = %Tesla.Env{
+      status: 200,
       body: "<html>",
       headers: [{"link", "<http://example.org/webmentions>; rel=\"webmention\""}]
     }
 
-    with_mock HTTPoison, get: fn _url, _headers, _opts -> {:ok, doc} end do
-      assert Webmentions.discover_endpoint("http://example.org") == {:ok, "http://example.org/webmentions"}
-    end
+    mock(fn _ -> {:ok, doc} end)
+    assert Webmentions.discover_endpoint("http://example.org") == {:ok, "http://example.org/webmentions"}
   end
 
   test "discovers from a link in document" do
-    doc = %HTTPoison.Response{
-      status_code: 200,
+    doc = %Tesla.Env{
+      status: 200,
       body: "<html><head><link rel=\"webmention\" href=\"http://example.org/webmentions\">",
       headers: [{"Content-Type", "text/html"}]
     }
 
-    with_mock HTTPoison, get: fn _url, _headers, _opts -> {:ok, doc} end do
-      assert Webmentions.discover_endpoint("http://example.org") == {:ok, "http://example.org/webmentions"}
-    end
+    mock(fn _ -> {:ok, doc} end)
+    assert Webmentions.discover_endpoint("http://example.org") == {:ok, "http://example.org/webmentions"}
   end
 
   test "discovers from multiple links in document" do
-    doc = %HTTPoison.Response{
-      status_code: 200,
+    doc = %Tesla.Env{
+      status: 200,
       body: """
       <html>
       <head>
@@ -56,14 +53,13 @@ defmodule WebmentionsTest do
       headers: [{"Content-Type", "text/html"}]
     }
 
-    with_mock HTTPoison, get: fn _url, _headers, _opts -> {:ok, doc} end do
-      assert Webmentions.discover_endpoint("http://example.org") == {:ok, "http://example.org/webmentions"}
-    end
+    mock(fn _ -> {:ok, doc} end)
+    assert Webmentions.discover_endpoint("http://example.org") == {:ok, "http://example.org/webmentions"}
   end
 
   test "discovers from a link list in header" do
-    doc = %HTTPoison.Response{
-      status_code: 200,
+    doc = %Tesla.Env{
+      status: 200,
       body: "<html>",
       headers: [
         {"Link",
@@ -71,14 +67,13 @@ defmodule WebmentionsTest do
       ]
     }
 
-    with_mock HTTPoison, get: fn _url, _headers, _opts -> {:ok, doc} end do
-      assert Webmentions.discover_endpoint("http://example.org") == {:ok, "http://example.org/webmentions"}
-    end
+    mock(fn _ -> {:ok, doc} end)
+    assert Webmentions.discover_endpoint("http://example.org") == {:ok, "http://example.org/webmentions"}
   end
 
   test "discovers from a link list in header when not first element" do
-    doc = %HTTPoison.Response{
-      status_code: 200,
+    doc = %Tesla.Env{
+      status: 200,
       body: "<html>",
       headers: [
         {"Link",
@@ -86,79 +81,75 @@ defmodule WebmentionsTest do
       ]
     }
 
-    with_mock HTTPoison, get: fn _url, _headers, _opts -> {:ok, doc} end do
-      assert Webmentions.discover_endpoint("http://example.org") == {:ok, "http://example.org/webmentions"}
-    end
+    mock(fn _ -> {:ok, doc} end)
+    assert Webmentions.discover_endpoint("http://example.org") == {:ok, "http://example.org/webmentions"}
   end
 
   test "ignores an empty link in header" do
-    doc = %HTTPoison.Response{status_code: 200, body: "<html>", headers: [{"Link", ""}]}
+    doc = %Tesla.Env{status: 200, body: "<html>", headers: [{"Link", ""}]}
 
-    with_mock HTTPoison, get: fn _url, _headers, _opts -> {:ok, doc} end do
-      assert Webmentions.discover_endpoint("http://example.org") == {:ok, nil}
-    end
+    mock(fn _ -> {:ok, doc} end)
+    assert Webmentions.discover_endpoint("http://example.org") == {:ok, nil}
   end
 
   test "resolves an empty link in document to document URL" do
-    doc = %HTTPoison.Response{
-      status_code: 200,
+    doc = %Tesla.Env{
+      status: 200,
       body: "<html><head><link rel=\"webmention\" href=\"\">",
       headers: [{"Content-Type", "text/html"}]
     }
 
-    with_mock HTTPoison, get: fn _url, _headers, _opts -> {:ok, doc} end do
-      assert Webmentions.discover_endpoint("http://example.org") == {:ok, "http://example.org"}
-    end
+    mock(fn _ -> {:ok, doc} end)
+    assert Webmentions.discover_endpoint("http://example.org") == {:ok, "http://example.org"}
   end
 
   test "correctly sends a mention to example.org/webmentions" do
-    doc = %HTTPoison.Response{
-      status_code: 200,
+    doc = %Tesla.Env{
+      status: 200,
       body: "<html class=\"h-entry\"><a href=\"http://example.org/test\">blah</a>",
       headers: [{"Link", "<http://example.org/webmentions>; rel=\"webmention\""}]
     }
 
-    with_mock HTTPoison,
-      get: fn _url, _headers, _opts -> {:ok, doc} end,
-      post: fn _url, _headers, _opts -> {:ok, doc} end do
-      assert Webmentions.send_webmentions("http://example.org") ==
-               {:ok, [{:ok, "http://example.org/test", "http://example.org/webmentions", "sent"}]}
-    end
+    mock(fn _ -> {:ok, doc} end)
+
+    assert Webmentions.send_webmentions("http://example.org") ==
+             {:ok, [{:ok, "http://example.org/test", "http://example.org/webmentions", "sent"}]}
   end
 
   test "doesn't send a webmention to a rel=nofollow" do
-    doc = %HTTPoison.Response{
-      status_code: 200,
+    doc = %Tesla.Env{
+      status: 200,
       body: "<html class=\"h-entry\"><a rel=\"nofollow\" href=\"http://example.org/test\">blah</a>",
       headers: [{"Link", "<http://example.org/webmentions>; rel=\"webmention\""}]
     }
 
-    with_mock HTTPoison,
-      get: fn _url, _headers, _opts -> {:ok, doc} end,
-      post: fn _url, _headers, _opts -> {:ok, doc} end do
-      assert Webmentions.send_webmentions("http://example.org") == {:ok, []}
-    end
+    mock(fn _ -> {:ok, doc} end)
+    assert Webmentions.send_webmentions("http://example.org") == {:ok, []}
   end
 
   test "successfully sends mentions to relative URLs" do
-    doc = %HTTPoison.Response{
-      status_code: 200,
+    doc = %Tesla.Env{
+      status: 200,
       body: "<html class=\"h-entry\"><a href=\"/test\">blah</a>",
       headers: [{"Link", "<http://example.org/webmentions>; rel=\"webmention\""}]
     }
 
-    with_mock HTTPoison,
-      get: fn url, _headers, _opts ->
+    mock(fn
+      %{method: :get, url: url} ->
         assert url != "/test"
         {:ok, doc}
-      end,
-      post: fn _url, _headers, _opts -> {:ok, doc} end do
-      assert Webmentions.send_webmentions("http://example.org") ==
-               {:ok, [{:ok, "http://example.org/test", "http://example.org/webmentions", "sent"}]}
-    end
+
+      %{method: :post} ->
+        {:ok, doc}
+    end)
+
+    assert Webmentions.send_webmentions("http://example.org") ==
+             {:ok, [{:ok, "http://example.org/test", "http://example.org/webmentions", "sent"}]}
   end
 
   test "successfully mentions a HTTP ressource" do
+    mock(fn _ -> %Tesla.Env{status: 200} end)
+
     assert Webmentions.send_webmentions_for_doc(
              "<html class=\"h-entry\"><a href=\"http://images1.dawandastatic.com/Product/18223/18223505/big/1301969630-83.jpg\">blah</a>",
              "http://example.org/"
@@ -171,17 +162,15 @@ defmodule WebmentionsTest do
   end
 
   test "doesn't send a mention with empty link" do
-    doc = %HTTPoison.Response{
-      status_code: 200,
+    doc = %Tesla.Env{
+      status: 200,
       body: "<html class=\"h-entry\"><a href=\"http://example.org/test\">blah</a>",
       headers: [{"Link", ""}]
     }
 
-    with_mock HTTPoison,
-      get: fn _url, _headers, _opts -> {:ok, doc} end,
-      post: fn _url, _headers, _opts -> {:ok, doc} end do
-      assert Webmentions.send_webmentions("http://example.org") ==
-               {:ok, [{:ok, "http://example.org/test", nil, "no endpoint found"}]}
-    end
+    mock(fn _ -> {:ok, doc} end)
+
+    assert Webmentions.send_webmentions("http://example.org") ==
+             {:ok, [{:ok, "http://example.org/test", nil, "no endpoint found"}]}
   end
 end
