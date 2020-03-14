@@ -16,7 +16,7 @@ defmodule Webmentions do
   end
 
   def send_webmentions_for_doc(html, source_url, root_selector \\ ".h-entry") do
-    document = Floki.parse(html)
+    document = Floki.parse_document!(html)
     content = Floki.find(document, root_selector)
 
     links =
@@ -95,7 +95,7 @@ defmodule Webmentions do
 
         is_text ->
           mention_link =
-            Floki.parse(response.body)
+            Floki.parse_document!(response.body)
             |> Floki.find("[rel~=webmention]")
             |> List.first()
 
@@ -138,18 +138,16 @@ defmodule Webmentions do
     {rslt, response} = HTTPoison.get(source_url, [], follow_redirects: true)
 
     if Utils.success?(rslt, response) do
-      Floki.parse(response.body)
+      Floki.parse_document!(response.body)
       |> Floki.find("a, link")
-      |> Enum.find(fn x ->
-        {tagname, _, _} = x
-
+      |> Enum.find(fn {tagname, _, _} = node ->
         target =
           case tagname do
             "a" ->
-              Floki.attribute(x, "href") |> List.first()
+              Floki.attribute([node], "href") |> List.first()
 
             _ ->
-              Floki.attribute(x, "rel") |> List.first()
+              Floki.attribute([node], "rel") |> List.first()
           end
 
         target == target_url
@@ -158,6 +156,9 @@ defmodule Webmentions do
       false
     end
   end
+
+  def abs_uri(url, base_url, doc) when is_bitstring(doc),
+    do: abs_uri(url, base_url, Floki.parse_document!(doc))
 
   def abs_uri(url, base_url, doc) do
     parsed = URI.parse(url)
