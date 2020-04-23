@@ -3,6 +3,7 @@ defmodule Webmentions do
   alias Webmentions.Utils
 
   plug(Tesla.Middleware.FollowRedirects, max_redirects: 3)
+  plug(Tesla.Middleware.FormUrlencoded)
 
   def send_webmentions(source_url, root_selector \\ ".h-entry") do
     case get(source_url) do
@@ -52,12 +53,7 @@ defmodule Webmentions do
   end
 
   def send_webmention(endpoint, source, target) do
-    www_source = URI.encode_www_form(source)
-    www_target = URI.encode_www_form(target)
-
-    case post(endpoint, "source=#{www_source}&target=#{www_target}", [
-           {"Content-Type", "application/x-www-form-urlencoded"}
-         ]) do
+    case post(endpoint, %{"source" => source, "target" => target}) do
       {:ok, response} ->
         if Utils.success?(:ok, response),
           do: :ok,
