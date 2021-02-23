@@ -30,6 +30,6 @@ where the list contains a list of URLs we sent a webmention to or
 ## Dependencies
 
 We need [Floki](https://github.com/philss/floki) for HTML parsing and
-[HTTPotion](https://github.com/myfreeweb/httpotion) for HTTP communication.
+[Tesla](https://github.com/teamon/tesla) for HTTP communication.
 
 
