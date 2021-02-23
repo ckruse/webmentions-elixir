@@ -6,11 +6,13 @@ A [Webmention](https://indiewebcamp.com/Webmention) module for Elixir.
 
 This package is [available in Hex](https://hex.pm/packages/webmentions)
 
-  1. Add webmentions to your list of dependencies in `mix.exs`:
+1. Add webmentions to your list of dependencies in `mix.exs`:
 
-        def deps do
-          [{:webmentions, "~> 0.0.4"}]
-        end
+   ```elixir
+   def deps do
+     [{:webmentions, "~> 0.5.0"}]
+   end
+   ```
 
 ## Usage
 
@@ -21,15 +23,17 @@ the URL is the URL of the source document:
 
 This will give you either
 
-    {:ok, ["list", "of", "urls"]}
+```elixir
+{:ok, ["list", "of", "urls"]}
+```
 
 where the list contains a list of URLs we sent a webmention to or
 
-    {:error, reason}
+```elixir
+{:error, reason}
+```
 
 ## Dependencies
 
 We need [Floki](https://github.com/philss/floki) for HTML parsing and
 [Tesla](https://github.com/teamon/tesla) for HTTP communication.
-
-
