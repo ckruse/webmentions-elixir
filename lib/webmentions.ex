@@ -27,19 +27,12 @@ defmodule Webmentions do
     |> send_webmentions_for_links(source_url, document)
   end
 
-  defp extract_links_from_doc(content) do
-    Floki.find(content, "a[href]")
-    |> Enum.filter(fn x ->
-      s =
-        Floki.attribute(x, "rel")
-        |> List.first()
-        |> to_string
-
-      not String.contains?(s, "nofollow")
-    end)
+  def send_webmentions_for_links(source_url, targets) do
+    sent = Enum.map(targets, &handle_send_webmention(source_url, &1))
+    {:ok, sent}
   end
 
-  def send_webmentions_for_links(links, source_url, document) do
+  defp send_webmentions_for_links(links, source_url, document) do
     sent = Enum.map(links, &handle_send_webmention(&1, source_url, document))
     {:ok, sent}
   end
@@ -245,5 +238,17 @@ defmodule Webmentions do
     if Utils.blank?(ret),
       do: nil,
       else: hd(ret) |> elem(1)
+  end
+
+  defp extract_links_from_doc(content) do
+    Floki.find(content, "a[href]")
+    |> Enum.filter(fn x ->
+      s =
+        Floki.attribute(x, "rel")
+        |> List.first()
+        |> to_string
+
+      not String.contains?(s, "nofollow")
+    end)
   end
 end

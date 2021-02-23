@@ -179,4 +179,39 @@ defmodule WebmentionsTest do
                 ]}
     end
   end
+
+  describe "Webmentions.send_webmentions_for_links/2" do
+    test "correctly sends a mention to example.org/webmentions" do
+      mock(fn env ->
+        case env.url do
+          "http://example.org/test" ->
+            %Tesla.Env{
+              status: 200,
+              body: "<html class=\"h-entry\"><a href=\"http://example.org/test\">blah</a>",
+              headers: [{"Link", "<http://example.org/webmentions>; rel=\"webmention\""}]
+            }
+
+          "http://other.org/test" ->
+            %Tesla.Env{
+              status: 200,
+              body: "<html class=\"h-entry\"><a href=\"http://other.org/test\">other blah</a>",
+              headers: [{"Link", "<http://other.org/webmentions>; rel=\"webmention\""}]
+            }
+
+          _webmention_endpoint ->
+            %Tesla.Env{status: 200}
+        end
+      end)
+
+      assert Webmentions.send_webmentions_for_links("http://source.org", [
+               "http://example.org/test",
+               "http://other.org/test"
+             ]) ==
+               {:ok,
+                [
+                  {:ok, "http://example.org/test", "http://example.org/webmentions", "sent"},
+                  {:ok, "http://other.org/test", "http://other.org/webmentions", "sent"}
+                ]}
+    end
+  end
 end
