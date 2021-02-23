@@ -1,5 +1,5 @@
 defmodule WebmentionsTest do
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
   doctest Webmentions
 
   import Tesla.Mock
