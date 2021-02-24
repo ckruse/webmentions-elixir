@@ -21,35 +21,37 @@ defmodule Webmentions do
 
   def send_webmentions_for_doc(html, source_url, root_selector \\ ".h-entry") do
     document = Floki.parse_document!(html)
-    content = Floki.find(document, root_selector)
 
-    links =
-      Floki.find(content, "a[href]")
-      |> Enum.filter(fn x ->
-        s =
-          Floki.attribute(x, "rel")
-          |> List.first()
-          |> to_string
+    Floki.find(document, root_selector)
+    |> extract_links_from_doc()
+    |> send_webmentions_for_links(source_url, document)
+  end
 
-        not String.contains?(s, "nofollow")
-      end)
-
-    sent =
-      Enum.reduce(links, [], fn link, acc ->
-        dst = Floki.attribute(link, "href") |> List.first() |> abs_uri(source_url, document)
-
-        with {:ok, endpoint} when endpoint != nil and endpoint != "" <- discover_endpoint(dst),
-             :ok <- send_webmention(endpoint, source_url, dst) do
-          acc ++ [{:ok, dst, endpoint, "sent"}]
-        else
-          {:ok, nil} -> acc ++ [{:ok, dst, nil, "no endpoint found"}]
-          {:ok, ""} -> acc ++ [{:ok, dst, nil, "no endpoint found"}]
-          {:error, status} when is_number(status) -> acc ++ [{:err, dst, nil, "Status #{status}"}]
-          {:error, message} -> acc ++ [{:err, dst, nil, message}]
-        end
-      end)
-
+  def send_webmentions_for_links(source_url, targets) do
+    sent = Enum.map(targets, &handle_send_webmention(source_url, &1))
     {:ok, sent}
+  end
+
+  defp send_webmentions_for_links(links, source_url, document) do
+    sent = Enum.map(links, &handle_send_webmention(&1, source_url, document))
+    {:ok, sent}
+  end
+
+  defp handle_send_webmention(link, source, document) do
+    target = Floki.attribute(link, "href") |> List.first() |> abs_uri(source, document)
+    handle_send_webmention(source, target)
+  end
+
+  defp handle_send_webmention(source, target) do
+    with {:ok, endpoint} when endpoint != nil and endpoint != "" <- discover_endpoint(target),
+         :ok <- send_webmention(endpoint, source, target) do
+      {:ok, target, endpoint, "sent"}
+    else
+      {:ok, nil} -> {:ok, target, nil, "no endpoint found"}
+      {:ok, ""} -> {:ok, target, nil, "no endpoint found"}
+      {:error, status} when is_number(status) -> {:err, target, nil, "Status #{status}"}
+      {:error, message} -> {:err, target, nil, message}
+    end
   end
 
   def send_webmention(endpoint, source, target) do
@@ -236,5 +238,17 @@ defmodule Webmentions do
     if Utils.blank?(ret),
       do: nil,
       else: hd(ret) |> elem(1)
+  end
+
+  defp extract_links_from_doc(content) do
+    Floki.find(content, "a[href]")
+    |> Enum.filter(fn x ->
+      s =
+        Floki.attribute(x, "rel")
+        |> List.first()
+        |> to_string
+
+      not String.contains?(s, "nofollow")
+    end)
   end
 end
