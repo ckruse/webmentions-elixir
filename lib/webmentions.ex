@@ -44,13 +44,13 @@ defmodule Webmentions do
 
   defp handle_send_webmention(source, target) do
     with {:ok, endpoint} when endpoint != nil and endpoint != "" <- discover_endpoint(target),
-         :ok <- send_webmention(endpoint, source, target) do
-      {:ok, target, endpoint, "sent"}
+         {:ok, response} <- send_webmention(endpoint, source, target) do
+      {:ok, target, endpoint, "sent", response}
     else
-      {:ok, nil} -> {:ok, target, nil, "no endpoint found"}
-      {:ok, ""} -> {:ok, target, nil, "no endpoint found"}
-      {:error, status} when is_number(status) -> {:err, target, nil, "Status #{status}"}
-      {:error, message} -> {:err, target, nil, message}
+      {:ok, nil} -> {:ok, target, nil, "no endpoint found", nil}
+      {:ok, ""} -> {:ok, target, nil, "no endpoint found", nil}
+      {:error, status} when is_number(status) -> {:err, target, nil, "Status #{status}", nil}
+      {:error, message} -> {:err, target, nil, message, nil}
     end
   end
 
@@ -58,7 +58,7 @@ defmodule Webmentions do
     case post(endpoint, %{"source" => source, "target" => target}) do
       {:ok, response} ->
         if Utils.success?(:ok, response),
-          do: :ok,
+          do: {:ok, response.body},
           else: {:error, response.status}
 
       {:error, reason} ->

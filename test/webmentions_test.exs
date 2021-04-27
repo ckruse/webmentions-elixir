@@ -116,7 +116,11 @@ defmodule WebmentionsTest do
       mock(fn _ -> {:ok, doc} end)
 
       assert Webmentions.send_webmentions("http://example.org") ==
-               {:ok, [{:ok, "http://example.org/test", "http://example.org/webmentions", "sent"}]}
+               {:ok,
+                [
+                  {:ok, "http://example.org/test", "http://example.org/webmentions", "sent",
+                   "<html class=\"h-entry\"><a href=\"http://example.org/test\">blah</a>"}
+                ]}
     end
 
     test "doesn't send a webmention to a rel=nofollow" do
@@ -131,23 +135,27 @@ defmodule WebmentionsTest do
     end
 
     test "successfully sends mentions to relative URLs" do
-      doc = %Tesla.Env{
-        status: 200,
-        body: "<html class=\"h-entry\"><a href=\"/test\">blah</a>",
-        headers: [{"Link", "<http://example.org/webmentions>; rel=\"webmention\""}]
-      }
-
       mock(fn
         %{method: :get, url: url} ->
           assert url != "/test"
-          {:ok, doc}
+
+          {:ok,
+           %Tesla.Env{
+             status: 200,
+             body: "<html class=\"h-entry\"><a href=\"/test\">blah</a>",
+             headers: [{"Link", "<http://example.org/webmentions>; rel=\"webmention\""}]
+           }}
 
         %{method: :post} ->
-          {:ok, doc}
+          {:ok,
+           %Tesla.Env{
+             status: 200,
+             body: "response body"
+           }}
       end)
 
       assert Webmentions.send_webmentions("http://example.org") ==
-               {:ok, [{:ok, "http://example.org/test", "http://example.org/webmentions", "sent"}]}
+               {:ok, [{:ok, "http://example.org/test", "http://example.org/webmentions", "sent", "response body"}]}
     end
 
     test "doesn't send a mention with empty link" do
@@ -160,7 +168,7 @@ defmodule WebmentionsTest do
       mock(fn _ -> {:ok, doc} end)
 
       assert Webmentions.send_webmentions("http://example.org") ==
-               {:ok, [{:ok, "http://example.org/test", nil, "no endpoint found"}]}
+               {:ok, [{:ok, "http://example.org/test", nil, "no endpoint found", nil}]}
     end
   end
 
@@ -175,7 +183,7 @@ defmodule WebmentionsTest do
                {:ok,
                 [
                   {:ok, "http://images1.dawandastatic.com/Product/18223/18223505/big/1301969630-83.jpg", nil,
-                   "no endpoint found"}
+                   "no endpoint found", nil}
                 ]}
     end
   end
@@ -199,7 +207,7 @@ defmodule WebmentionsTest do
             }
 
           _webmention_endpoint ->
-            %Tesla.Env{status: 200}
+            %Tesla.Env{status: 200, body: "some body response"}
         end
       end)
 
@@ -209,8 +217,8 @@ defmodule WebmentionsTest do
              ]) ==
                {:ok,
                 [
-                  {:ok, "http://example.org/test", "http://example.org/webmentions", "sent"},
-                  {:ok, "http://other.org/test", "http://other.org/webmentions", "sent"}
+                  {:ok, "http://example.org/test", "http://example.org/webmentions", "sent", "some body response"},
+                  {:ok, "http://other.org/test", "http://other.org/webmentions", "sent", "some body response"}
                 ]}
     end
   end
