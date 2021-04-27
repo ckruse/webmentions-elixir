@@ -1,6 +1,8 @@
 defmodule Webmentions do
   use Tesla
+
   alias Webmentions.Utils
+  alias Webmentions.Response
 
   plug(Tesla.Middleware.FollowRedirects, max_redirects: 3)
   plug(Tesla.Middleware.FormUrlencoded)
@@ -44,13 +46,20 @@ defmodule Webmentions do
 
   defp handle_send_webmention(source, target) do
     with {:ok, endpoint} when endpoint != nil and endpoint != "" <- discover_endpoint(target),
-         :ok <- send_webmention(endpoint, source, target) do
-      {:ok, target, endpoint, "sent"}
+         {:ok, body} <- send_webmention(endpoint, source, target) do
+      %Response{status: :ok, target: target, endpoint: endpoint, message: "sent", body: body}
     else
-      {:ok, nil} -> {:ok, target, nil, "no endpoint found"}
-      {:ok, ""} -> {:ok, target, nil, "no endpoint found"}
-      {:error, status} when is_number(status) -> {:err, target, nil, "Status #{status}"}
-      {:error, message} -> {:err, target, nil, message}
+      {:ok, nil} ->
+        %Response{status: :no_endpoint, target: target, message: "no endpoint found"}
+
+      {:ok, ""} ->
+        %Response{status: :no_endpoint, target: target, message: "no endpoint found"}
+
+      {:error, status} when is_number(status) ->
+        %Response{status: :error, target: target, http_status: 200, message: "Status #{status}"}
+
+      {:error, message} ->
+        %Response{status: :error, target: target, message: message}
     end
   end
 
@@ -58,7 +67,7 @@ defmodule Webmentions do
     case post(endpoint, %{"source" => source, "target" => target}) do
       {:ok, response} ->
         if Utils.success?(:ok, response),
-          do: :ok,
+          do: {:ok, response.body},
           else: {:error, response.status}
 
       {:error, reason} ->

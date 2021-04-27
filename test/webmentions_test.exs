@@ -116,7 +116,16 @@ defmodule WebmentionsTest do
       mock(fn _ -> {:ok, doc} end)
 
       assert Webmentions.send_webmentions("http://example.org") ==
-               {:ok, [{:ok, "http://example.org/test", "http://example.org/webmentions", "sent"}]}
+               {:ok,
+                [
+                  %Webmentions.Response{
+                    status: :ok,
+                    target: "http://example.org/test",
+                    endpoint: "http://example.org/webmentions",
+                    message: "sent",
+                    body: "<html class=\"h-entry\"><a href=\"http://example.org/test\">blah</a>"
+                  }
+                ]}
     end
 
     test "doesn't send a webmention to a rel=nofollow" do
@@ -147,7 +156,16 @@ defmodule WebmentionsTest do
       end)
 
       assert Webmentions.send_webmentions("http://example.org") ==
-               {:ok, [{:ok, "http://example.org/test", "http://example.org/webmentions", "sent"}]}
+               {:ok,
+                [
+                  %Webmentions.Response{
+                    status: :ok,
+                    target: "http://example.org/test",
+                    endpoint: "http://example.org/webmentions",
+                    message: "sent",
+                    body: "<html class=\"h-entry\"><a href=\"/test\">blah</a>"
+                  }
+                ]}
     end
 
     test "doesn't send a mention with empty link" do
@@ -160,7 +178,15 @@ defmodule WebmentionsTest do
       mock(fn _ -> {:ok, doc} end)
 
       assert Webmentions.send_webmentions("http://example.org") ==
-               {:ok, [{:ok, "http://example.org/test", nil, "no endpoint found"}]}
+               {:ok,
+                [
+                  %Webmentions.Response{
+                    status: :no_endpoint,
+                    target: "http://example.org/test",
+                    endpoint: nil,
+                    message: "no endpoint found"
+                  }
+                ]}
     end
   end
 
@@ -174,8 +200,12 @@ defmodule WebmentionsTest do
              ) ==
                {:ok,
                 [
-                  {:ok, "http://images1.dawandastatic.com/Product/18223/18223505/big/1301969630-83.jpg", nil,
-                   "no endpoint found"}
+                  %Webmentions.Response{
+                    status: :no_endpoint,
+                    target: "http://images1.dawandastatic.com/Product/18223/18223505/big/1301969630-83.jpg",
+                    endpoint: nil,
+                    message: "no endpoint found"
+                  }
                 ]}
     end
   end
@@ -209,8 +239,18 @@ defmodule WebmentionsTest do
              ]) ==
                {:ok,
                 [
-                  {:ok, "http://example.org/test", "http://example.org/webmentions", "sent"},
-                  {:ok, "http://other.org/test", "http://other.org/webmentions", "sent"}
+                  %Webmentions.Response{
+                    status: :ok,
+                    target: "http://example.org/test",
+                    endpoint: "http://example.org/webmentions",
+                    message: "sent"
+                  },
+                  %Webmentions.Response{
+                    status: :ok,
+                    target: "http://other.org/test",
+                    endpoint: "http://other.org/webmentions",
+                    message: "sent"
+                  }
                 ]}
     end
   end
