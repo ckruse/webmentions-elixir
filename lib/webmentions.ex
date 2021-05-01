@@ -7,6 +7,7 @@ defmodule Webmentions do
   plug(Tesla.Middleware.FollowRedirects, max_redirects: 3)
   plug(Tesla.Middleware.FormUrlencoded)
 
+  @spec send_webmentions(String.t(), String.t()) :: {:ok, [Response.t()]} | {:error, integer()} | {:error, String.t()}
   def send_webmentions(source_url, root_selector \\ ".h-entry") do
     case get(source_url) do
       {:ok, response} ->
@@ -21,6 +22,7 @@ defmodule Webmentions do
     end
   end
 
+  @spec send_webmentions_for_doc(String.t(), String.t(), String.t()) :: {:ok, [Response.t()]}
   def send_webmentions_for_doc(html, source_url, root_selector \\ ".h-entry") do
     document = Floki.parse_document!(html)
 
@@ -29,6 +31,7 @@ defmodule Webmentions do
     |> send_webmentions_for_links(source_url, document)
   end
 
+  @spec send_webmentions_for_links(String.t(), [String.t()]) :: {:ok, [Response.t()]}
   def send_webmentions_for_links(source_url, targets) do
     sent = Enum.map(targets, &handle_send_webmention(source_url, &1))
     {:ok, sent}
@@ -63,6 +66,8 @@ defmodule Webmentions do
     end
   end
 
+  @spec send_webmention(String.t(), String.t(), String.t()) ::
+          {:error, integer()} | {:error, String.t()} | {:ok, String.t()}
   def send_webmention(endpoint, source, target) do
     case post(endpoint, %{"source" => source, "target" => target}) do
       {:ok, response} ->
@@ -75,6 +80,7 @@ defmodule Webmentions do
     end
   end
 
+  @spec discover_endpoint(String.t()) :: {:error, String.t()} | {:ok, nil | String.t() | URI.t()}
   def discover_endpoint(source_url) do
     with {:ok, response} <- get(source_url),
          true <- Utils.success?(:ok, response) do
@@ -123,6 +129,7 @@ defmodule Webmentions do
     end
   end
 
+  @spec get_link_header(Tesla.Env.t()) :: nil | String.t()
   def get_link_header(response) do
     val = get_header(response.headers, "Link")
 
@@ -138,10 +145,12 @@ defmodule Webmentions do
     end
   end
 
+  @spec is_webmention_link(String.t()) :: boolean()
   def is_webmention_link(link) do
     Regex.match?(~r/rel="?(http:\/\/webmention\/|webmention)"?/, to_string(link))
   end
 
+  @spec is_valid_mention(String.t(), String.t()) :: boolean()
   def is_valid_mention(source_url, target_url) do
     with {:ok, response} <- get(source_url),
          true <- Utils.success?(:ok, response) do
@@ -164,6 +173,7 @@ defmodule Webmentions do
     end
   end
 
+  @spec abs_uri(String.t(), String.t(), String.t() | Floki.html_tree()) :: String.t()
   def abs_uri(url, base_url, doc) when is_bitstring(doc),
     do: abs_uri(url, base_url, Floki.parse_document!(doc))
 
@@ -203,6 +213,7 @@ defmodule Webmentions do
     end
   end
 
+  @spec results_as_html([Response.t()]) :: String.t()
   def results_as_html(list) do
     lines =
       Enum.map(list, fn
@@ -220,6 +231,7 @@ defmodule Webmentions do
     "<ul>#{lines}</ul>"
   end
 
+  @spec results_as_text([Response.t()]) :: String.t()
   def results_as_text(list) do
     list
     |> Enum.map(fn
