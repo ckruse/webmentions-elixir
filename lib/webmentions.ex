@@ -205,38 +205,34 @@ defmodule Webmentions do
 
   def results_as_html(list) do
     lines =
-      Enum.map(list, fn line ->
-        case line do
-          {:err, dest, nil, reason} ->
-            "<strong>ERROR:</strong> #{dest}: #{reason}"
+      Enum.map(list, fn
+        %Response{status: :error, message: reason, target: dest, endpoint: endpoint} when not is_nil(endpoint) ->
+          "<li><strong>ERROR:</strong> #{dest}: endpoint #{endpoint}: #{reason}</li>"
 
-          {:err, dest, endpoint, reason} ->
-            "<strong>ERROR:</strong> #{dest}: endpoint #{endpoint}: #{reason}"
+        %Response{status: status, message: reason, target: dest} when status in [:error, :no_endpoint] ->
+          "<li><strong>ERROR:</strong> #{dest}: #{reason}</li>"
 
-          {:ok, dest, endpoint, _} ->
-            "<strong>SUCCESS:</strong> #{dest}: sent to endpoint #{endpoint}"
-        end
+        %Response{status: :ok, target: dest, endpoint: endpoint} ->
+          "<li><strong>SUCCESS:</strong> #{dest}: sent to endpoint #{endpoint}</li>"
       end)
+      |> Enum.join()
 
-    "<ul>" <> Enum.join(lines, "<li>") <> "</ul>"
+    "<ul>#{lines}</ul>"
   end
 
   def results_as_text(list) do
-    lines =
-      Enum.map(list, fn line ->
-        case line do
-          {:err, dest, nil, reason} ->
-            "ERROR: #{dest}: #{reason}"
+    list
+    |> Enum.map(fn
+      %Response{status: :error, message: reason, target: dest, endpoint: endpoint} when not is_nil(endpoint) ->
+        "ERROR: #{dest}: endpoint #{endpoint}: #{reason}\n"
 
-          {:err, dest, endpoint, reason} ->
-            "ERROR: #{dest}: endpoint #{endpoint}: #{reason}"
+      %Response{status: status, message: reason, target: dest} when status in [:error, :no_endpoint] ->
+        "ERROR: #{dest}: #{reason}\n"
 
-          {:ok, dest, endpoint, _} ->
-            "SUCCESS: #{dest}: sent to endpoint #{endpoint}"
-        end
-      end)
-
-    Enum.join(lines, "\n")
+      %Response{status: :ok, target: dest, endpoint: endpoint} ->
+        "SUCCESS: #{dest}: sent to endpoint #{endpoint}\n"
+    end)
+    |> Enum.join()
   end
 
   defp get_header(headers, key) do

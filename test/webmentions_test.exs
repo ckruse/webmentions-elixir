@@ -254,4 +254,68 @@ defmodule WebmentionsTest do
                 ]}
     end
   end
+
+  describe "results_as_html/1" do
+    test "converts a success list to html" do
+      assert Webmentions.results_as_html([
+               %Webmentions.Response{status: :ok, endpoint: "http://example.org", target: "http://example.org"}
+             ]) ==
+               "<ul>" <>
+                 "<li><strong>SUCCESS:</strong> http://example.org: sent to endpoint http://example.org</li>" <>
+                 "</ul>"
+    end
+
+    test "converts an error list to html" do
+      assert Webmentions.results_as_html([
+               %Webmentions.Response{status: :error, message: "Status 500", target: "http://example.org"},
+               %Webmentions.Response{
+                 status: :error,
+                 message: "foo bar",
+                 target: "http://example.org/",
+                 endpoint: "http://example.org/"
+               }
+             ]) ==
+               "<ul>" <>
+                 "<li><strong>ERROR:</strong> http://example.org: Status 500</li>" <>
+                 "<li><strong>ERROR:</strong> http://example.org/: endpoint http://example.org/: foo bar</li>" <>
+                 "</ul>"
+    end
+
+    test "converts a no endpoint list to html" do
+      assert Webmentions.results_as_html([
+               %Webmentions.Response{status: :no_endpoint, message: "No Endpoint", target: "http://example.org"}
+             ]) ==
+               "<ul>" <>
+                 "<li><strong>ERROR:</strong> http://example.org: No Endpoint</li>" <>
+                 "</ul>"
+    end
+  end
+
+  describe "results_as_text/1" do
+    test "converts a success list to text" do
+      assert Webmentions.results_as_text([
+               %Webmentions.Response{status: :ok, endpoint: "http://example.org", target: "http://example.org"}
+             ]) == "SUCCESS: http://example.org: sent to endpoint http://example.org\n"
+    end
+
+    test "converts an error list to html" do
+      assert Webmentions.results_as_text([
+               %Webmentions.Response{status: :error, message: "Status 500", target: "http://example.org"},
+               %Webmentions.Response{
+                 status: :error,
+                 message: "foo bar",
+                 target: "http://example.org/",
+                 endpoint: "http://example.org/"
+               }
+             ]) ==
+               "ERROR: http://example.org: Status 500\n" <>
+                 "ERROR: http://example.org/: endpoint http://example.org/: foo bar\n"
+    end
+
+    test "converts a no endpoint list to html" do
+      assert Webmentions.results_as_text([
+               %Webmentions.Response{status: :no_endpoint, message: "No Endpoint", target: "http://example.org"}
+             ]) == "ERROR: http://example.org: No Endpoint\n"
+    end
+  end
 end
