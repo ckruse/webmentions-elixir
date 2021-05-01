@@ -56,7 +56,7 @@ defmodule Webmentions do
         %Response{status: :no_endpoint, target: target, message: "no endpoint found"}
 
       {:error, status} when is_number(status) ->
-        %Response{status: :error, target: target, http_status: 200, message: "Status #{status}"}
+        %Response{status: :error, target: target, http_status: status, message: "Status #{status}"}
 
       {:error, message} ->
         %Response{status: :error, target: target, message: message}
