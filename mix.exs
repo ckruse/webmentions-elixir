@@ -31,7 +31,7 @@ defmodule Webmentions.Mixfile do
     [
       files: ["lib", "mix.exs", "README.md", "LICENSE"],
       maintainers: ["Christian Kruse"],
-      licenses: ["AGPL 3.0"],
+      licenses: ["MIT"],
       links: %{"GitHub" => "https://github.com/ckruse/webmentions-elixir"}
     ]
   end
