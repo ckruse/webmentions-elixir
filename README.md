@@ -10,7 +10,7 @@ This package is [available in Hex](https://hex.pm/packages/webmentions)
 
    ```elixir
    def deps do
-     [{:webmentions, "~> 1.0.3"}]
+     [{:webmentions, "~> 2.0.0"}]
    end
    ```
 
