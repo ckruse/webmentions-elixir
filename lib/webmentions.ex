@@ -260,6 +260,13 @@ defmodule Webmentions do
   defp extract_links_from_doc(content) do
     Floki.find(content, "a[href]")
     |> Enum.filter(fn x ->
+      case Floki.attribute(x, "href") |> List.first() do
+        "/" <> _ -> true
+        "http" <> _ -> true
+        _ -> false
+      end
+    end)
+    |> Enum.filter(fn x ->
       s =
         Floki.attribute(x, "rel")
         |> List.first()

@@ -139,6 +139,21 @@ defmodule WebmentionsTest do
       assert Webmentions.send_webmentions("http://example.org") == {:ok, []}
     end
 
+    test "doesn't send a webmention to links with URI schemes (mailto, tel)" do
+      doc = %Tesla.Env{
+        status: 200,
+        body: "
+          <html class=\"h-entry\">
+            <a href=\"mailto:email@example.com\">email</a>
+            <a href=\"tel:+1234567890\">+1234567890</a>
+          </html>",
+        headers: [{"Link", "<http://example.org/webmentions>; rel=\"webmention\""}]
+      }
+
+      mock(fn _ -> {:ok, doc} end)
+      assert Webmentions.send_webmentions("http://example.org") == {:ok, []}
+    end
+
     test "successfully sends mentions to relative URLs" do
       doc = %Tesla.Env{
         status: 200,
