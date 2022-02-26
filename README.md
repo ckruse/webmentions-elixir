@@ -18,8 +18,12 @@ This package is [available in Hex](https://hex.pm/packages/webmentions)
 
 Just call `Webmentions.send_webmentions("http://example.org/")` where
 the URL is the URL of the source document:
+    
+    Webmentions.send_webmentions("http://example.org/", opts \\ [])
 
-    Webmentions.send_webmentions("http://example.org/")
+Options include:
+  * `root_selector`: css class filtering the block where to look for links (default: `.h-entry`)
+  * `reject_nofollow`: doesn't send webmention to links with `rel="nofollow"` attribute (default: `true`)
 
 This will give you either
 
@@ -37,7 +41,7 @@ If you already know the list of URL mentions, you can skip parsing the
 source URL and send webmentions to all destinations URL (if they support it):
 
     destinations = ["http://example.org/", "http://other.org/"]
-    Webmentions.send_webmentions_for_urls("https://source.org", destinations)
+    Webmentions.send_webmentions_for_links("https://source.org", destinations)
 
 It will behave as `Webmentions.send_webmentions/2` does.
 

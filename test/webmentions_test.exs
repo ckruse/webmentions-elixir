@@ -139,6 +139,41 @@ defmodule WebmentionsTest do
       assert Webmentions.send_webmentions("http://example.org") == {:ok, []}
     end
 
+    test "doesn't send a webmention to a rel=nofollow when set via opts" do
+      doc = %Tesla.Env{
+        status: 200,
+        body: "<html class=\"h-entry\"><a rel=\"nofollow\" href=\"http://example.org/test\">blah</a>",
+        headers: [{"Link", "<http://example.org/webmentions>; rel=\"webmention\""}]
+      }
+
+      mock(fn _ -> {:ok, doc} end)
+      assert Webmentions.send_webmentions("http://example.org", reject_nofollow: true) == {:ok, []}
+    end
+
+    test "sends a webmention to a rel=nofollow when set so" do
+      doc = %Tesla.Env{
+        status: 200,
+        body: "<html class=\"h-entry\"><a rel=\"nofollow\" href=\"http://example.org/test\">blah</a>",
+        headers: [{"Link", "<http://example.org/webmentions>; rel=\"webmention\""}]
+      }
+
+      mock(fn _ -> {:ok, doc} end)
+
+      assert Webmentions.send_webmentions("http://example.org", reject_nofollow: false) == {
+               :ok,
+               [
+                 %Webmentions.Response{
+                   body: "<html class=\"h-entry\"><a rel=\"nofollow\" href=\"http://example.org/test\">blah</a>",
+                   endpoint: "http://example.org/webmentions",
+                   http_status: nil,
+                   message: "sent",
+                   status: :ok,
+                   target: "http://example.org/test"
+                 }
+               ]
+             }
+    end
+
     test "doesn't send a webmention to links with URI schemes (mailto, tel)" do
       doc = %Tesla.Env{
         status: 200,
@@ -203,6 +238,44 @@ defmodule WebmentionsTest do
                   }
                 ]}
     end
+
+    test "respects the default options" do
+      doc = %Tesla.Env{
+        status: 200,
+        body: "<html class=\"h-entry\"><a rel=\"nofollow\" href=\"http://example.org/test\">blah</a>",
+        headers: [{"Link", ""}]
+      }
+
+      mock(fn _ -> {:ok, doc} end)
+
+      assert Webmentions.send_webmentions("http://example.org") == {:ok, []}
+    end
+
+    test "set :root_selector and :reject_nofollow" do
+      doc = %Tesla.Env{
+        status: 200,
+        body: "<html class=\"different-selector\"><a rel=\"nofollow\" href=\"http://example.org/test\">blah</a>",
+        headers: [{"Link", ""}]
+      }
+
+      mock(fn _ -> {:ok, doc} end)
+
+      assert Webmentions.send_webmentions("http://example.org",
+               root_selector: ".different-selector",
+               reject_nofollow: false
+             ) ==
+               {:ok,
+                [
+                  %Webmentions.Response{
+                    body: nil,
+                    endpoint: nil,
+                    http_status: nil,
+                    message: "no endpoint found",
+                    status: :no_endpoint,
+                    target: "http://example.org/test"
+                  }
+                ]}
+    end
   end
 
   describe "Webmentions.send_webmentions_for_doc/3" do
@@ -220,6 +293,56 @@ defmodule WebmentionsTest do
                     target: "http://images1.dawandastatic.com/Product/18223/18223505/big/1301969630-83.jpg",
                     endpoint: nil,
                     message: "no endpoint found"
+                  }
+                ]}
+    end
+
+    test "uses the root_selector" do
+      mock(fn _ -> %Tesla.Env{status: 200} end)
+
+      assert Webmentions.send_webmentions_for_doc(
+               "<html class=\"class-selector\"><a href=\"http://images1.dawandastatic.com/Product/18223/18223505/big/1301969630-83.jpg\">blah</a>",
+               "http://example.org/",
+               ".class-selector"
+             ) ==
+               {:ok,
+                [
+                  %Webmentions.Response{
+                    status: :no_endpoint,
+                    target: "http://images1.dawandastatic.com/Product/18223/18223505/big/1301969630-83.jpg",
+                    endpoint: nil,
+                    message: "no endpoint found"
+                  }
+                ]}
+    end
+
+    test "respects the default options" do
+      mock(fn _ -> %Tesla.Env{status: 200} end)
+
+      assert Webmentions.send_webmentions_for_doc(
+               "<html class=\"h-entry\"><a rel=\"nofollow\" href=\"http://images1.dawandastatic.com/Product/18223/18223505/big/1301969630-83.jpg\">blah</a>",
+               "http://example.org"
+             ) == {:ok, []}
+    end
+
+    test "set :root_selector and :reject_nofollow" do
+      mock(fn _ -> %Tesla.Env{status: 200} end)
+
+      assert Webmentions.send_webmentions_for_doc(
+               "<html class=\"different-selector\"><a rel=\"nofollow\" href=\"http://example.org/test\">blah</a>",
+               "http://example.org",
+               root_selector: ".different-selector",
+               reject_nofollow: false
+             ) ==
+               {:ok,
+                [
+                  %Webmentions.Response{
+                    body: nil,
+                    endpoint: nil,
+                    http_status: nil,
+                    message: "no endpoint found",
+                    status: :no_endpoint,
+                    target: "http://example.org/test"
                   }
                 ]}
     end
