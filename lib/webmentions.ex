@@ -7,12 +7,31 @@ defmodule Webmentions do
   plug(Tesla.Middleware.FollowRedirects, max_redirects: 3)
   plug(Tesla.Middleware.FormUrlencoded)
 
-  @spec send_webmentions(String.t(), String.t()) :: {:ok, [Response.t()]} | {:error, integer()} | {:error, String.t()}
-  def send_webmentions(source_url, root_selector \\ ".h-entry") do
+  @type options :: {:root_selector, String.t()} | {:reject_nofollow, boolean()}
+
+  @default_opts [
+    root_selector: ".h-entry",
+    reject_nofollow: true
+  ]
+
+  @doc """
+  Send webmentions to links found on the `source_url` page.
+
+  Options include:
+    * root_selector: css class filtering the block where to look for links (default: `.h-entry`)
+    * reject_nofollow: doesn't send webmention to links with `rel="nofollow"` attribute (`true` by default)
+  """
+  @spec send_webmentions(String.t(), String.t() | [options()]) ::
+          {:ok, [Response.t()]} | {:error, integer()} | {:error, String.t()}
+  def send_webmentions(source_url, opts \\ [])
+
+  def send_webmentions(source_url, root_selector) when is_binary(root_selector) do
+    opts = Keyword.merge(@default_opts, root_selector: root_selector)
+
     case get(source_url) do
       {:ok, response} ->
         if Utils.success?(:ok, response) do
-          send_webmentions_for_doc(response.body, source_url, root_selector)
+          send_webmentions_for_doc(response.body, source_url, opts)
         else
           {:error, response.status}
         end
@@ -22,12 +41,41 @@ defmodule Webmentions do
     end
   end
 
-  @spec send_webmentions_for_doc(String.t(), String.t(), String.t()) :: {:ok, [Response.t()]}
-  def send_webmentions_for_doc(html, source_url, root_selector \\ ".h-entry") do
+  def send_webmentions(source_url, opts) when is_list(opts) do
+    opts = Keyword.merge(@default_opts, opts)
+
+    case get(source_url) do
+      {:ok, response} ->
+        if Utils.success?(:ok, response) do
+          send_webmentions_for_doc(response.body, source_url, opts)
+        else
+          {:error, response.status}
+        end
+
+      {:error, reason} ->
+        {:error, Atom.to_string(reason)}
+    end
+  end
+
+  @spec send_webmentions_for_doc(String.t(), String.t(), String.t() | [options()]) :: {:ok, [Response.t()]}
+  def send_webmentions_for_doc(html, source_url, opts \\ [])
+
+  def send_webmentions_for_doc(html, source_url, root_selector) when is_binary(root_selector) do
+    opts = Keyword.merge(@default_opts, root_selector: root_selector)
     document = Floki.parse_document!(html)
 
     Floki.find(document, root_selector)
-    |> extract_links_from_doc()
+    |> extract_links_from_doc(opts)
+    |> send_webmentions_for_links(source_url, document)
+  end
+
+  def send_webmentions_for_doc(html, source_url, opts) when is_list(opts) do
+    opts = Keyword.merge(@default_opts, opts)
+    root_selector = Keyword.get(opts, :root_selector)
+    document = Floki.parse_document!(html)
+
+    Floki.find(document, root_selector)
+    |> extract_links_from_doc(opts)
     |> send_webmentions_for_links(source_url, document)
   end
 
@@ -257,22 +305,27 @@ defmodule Webmentions do
       else: hd(ret) |> elem(1)
   end
 
-  defp extract_links_from_doc(content) do
+  defp extract_links_from_doc(content, opts) do
     Floki.find(content, "a[href]")
-    |> Enum.filter(fn x ->
-      case Floki.attribute(x, "href") |> List.first() do
+    |> Enum.filter(fn link ->
+      case Floki.attribute(link, "href") |> List.first() do
         "/" <> _ -> true
         "http" <> _ -> true
         _ -> false
       end
     end)
-    |> Enum.filter(fn x ->
-      s =
-        Floki.attribute(x, "rel")
-        |> List.first()
-        |> to_string
+    |> maybe_reject_nofollow_links(opts[:reject_nofollow])
+  end
 
-      not String.contains?(s, "nofollow")
+  defp maybe_reject_nofollow_links(links, false), do: links
+
+  defp maybe_reject_nofollow_links(links, true) do
+    Enum.reject(links, fn link ->
+      link
+      |> Floki.attribute("rel")
+      |> List.first()
+      |> to_string
+      |> String.contains?("nofollow")
     end)
   end
 end
