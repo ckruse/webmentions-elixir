@@ -172,7 +172,7 @@ defmodule Webmentions do
       end
     else
       %Tesla.Env{status: code} -> {:error, code}
-      {:error, reason} -> {:error, Atom.to_string(reason)}
+      {:error, reason} -> {:error, reason}
       _ -> {:error, "unknown error"}
     end
   end
