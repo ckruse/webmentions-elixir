@@ -4,7 +4,7 @@ defmodule Webmentions.Mixfile do
   def project do
     [
       app: :webmentions,
-      version: "3.0.0",
+      version: "3.0.1",
       elixir: "~> 1.14",
       build_embedded: Mix.env() == :prod,
       start_permanent: Mix.env() == :prod,
