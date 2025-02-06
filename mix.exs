@@ -47,7 +47,7 @@ defmodule Webmentions.Mixfile do
   # Type "mix help deps" for more examples and options
   defp deps do
     [
-      {:tesla, "~> 1.13.0"},
+      {:tesla, "~> 1.14.0"},
       {:floki, "~> 0.23"},
       {:ex_doc, ">= 0.0.0", only: :dev}
     ]
